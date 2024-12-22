@@ -5,19 +5,19 @@ import { TITLE_TAILWIND_CLASS } from '@/utils/constants'
 
 const features = [
   {
-    name: 'Build faster.',
+    name: 'AI-Powered MCQs',
     description:
-      'Get up and running in no time with pre-configured settings and best practices. Say goodbye to setup and focus on what truly matters - building your application.',
+      'Submit educational articles or YouTube lectures, and our platform generates 20 MCQ questions to test your understanding. Perfect for self-assessment and learning reinforcement.',
     icon: Computer,
   },
   {
-    name: 'Focus on business logic.',
-    description: 'Concentrate on solving business problems instead of dealing with the repetitive setup.',
+    name: 'Supports Articles & Videos',
+    description: 'Whether it is a written article or a YouTube lecture, our platform processes both formats to extract key information and create quizzes.',
     icon: FaBusinessTime,
   },
   {
-    name: 'Ready for scale.',
-    description: 'Prepare for growth from day one. With built-in optimizations and scalable architecture, your application will be ready to handle increased traffic and complexity.',
+    name: 'Track Your Progress',
+    description: 'Monitor your learning journey with a history of resources you’ve tried, along with your scores. Stay motivated and improve over time.',
     icon: Network,
   },
 ]
@@ -30,10 +30,10 @@ export default function SideBySide() {
           <div className="lg:pr-8 lg:pt-4">
             <div className="lg:max-w-lg">
               <p className={`${TITLE_TAILWIND_CLASS} mt-2 font-semibold tracking-tight dark:text-white text-gray-900`}>
-                Nextjs Starter Kit: A faster way to production
+                Revolutionize Your Learning with AI-Powered Quizzes
               </p>
               <p className="mt-6 leading-8 text-gray-600 dark:text-gray-400">
-                Accelerate your development with this powerful Nextjs Starter Kit
+                Enhance your understanding of educational resources by generating MCQs and tracking your progress effortlessly.
               </p>
               <dl className="mt-10 max-w-xl space-y-8 leading-7 text-gray-600 lg:max-w-none">
                 {features.map((feature) => (

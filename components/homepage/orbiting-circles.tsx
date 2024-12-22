@@ -5,8 +5,8 @@ import Image from "next/image";
 export function OrbitingCirclesComponent() {
   return (
     <div className="relative flex h-[500px] w-full max-w-[32rem] items-center justify-center overflow-hidden rounded-lg">
-      <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-500/80 bg-clip-text text-center text-8xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
-        Build Fast
+      <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-500/80 bg-clip-text text-center text-7xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
+        Learn Smarter
       </span>
 
       {/* Inner Circles */}
@@ -16,7 +16,7 @@ export function OrbitingCirclesComponent() {
         delay={20}
         radius={80}
       >
-        <Icons.typescript />
+        <Icons.brain />
       </OrbitingCircles>
       <OrbitingCircles
         className="h-[30px] w-[30px] border-none bg-transparent"
@@ -24,7 +24,7 @@ export function OrbitingCirclesComponent() {
         delay={10}
         radius={80}
       >
-        <Icons.tailwind />
+        <Icons.book />
       </OrbitingCircles>
 
       {/* Outer Circles (reverse) */}
@@ -34,7 +34,7 @@ export function OrbitingCirclesComponent() {
         radius={190}
         duration={20}
       >
-        <Icons.nextjs />
+        <Icons.youtube />
       </OrbitingCircles>
       <OrbitingCircles
         className="h-[50px] w-[50px] border-none bg-transparent"
@@ -43,38 +43,88 @@ export function OrbitingCirclesComponent() {
         duration={20}
         delay={20}
       >
-        <Icons.supabase />
+        <Icons.ai />
       </OrbitingCircles>
     </div>
   );
 }
 
 const Icons = {
-  typescript: (props: IconProps) => (
-    <Image src="https://utfs.io/f/5b51351d-218b-4931-a296-0a9275030aaf-8myeez.png" alt=""
-      width={100}
-      height={100}
-    />
+  brain: (props: IconProps) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M9.5 2a2.5 2.5 0 0 1 5 0v7a2.5 2.5 0 0 1-5 0v-7z" />
+      <path d="M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+      <path d="M12 22a7 7 0 1 0 0-14 7 7 0 0 0 0 14z" />
+    </svg>
   ),
-  tailwind: (props: IconProps) => (
-    <Image src="https://utfs.io/f/666774c0-dc3a-4d5a-84b7-cc96e682db61-bhgw4o.png" alt=""
-      width={100}
-      height={100}
-    // className="bg-black p-2 rounded"
-    />
+
+  // Book Icon (Educational Articles)
+  book: (props: IconProps) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" />
+      <path d="M6 16h14" />
+    </svg>
   ),
-  supabase: (props: IconProps) => (
-    <Image src="https://utfs.io/f/c62a5d13-91e4-476f-9d36-786d9995c97f-rqpuxo.png" alt=""
-      width={100}
-      height={100}
-    // className="bg-black p-2 rounded"
-    />
+
+  // YouTube Icon (YouTube Lectures)
+  youtube: (props: IconProps) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+      <path d="M9.75 15.02l5.75-3.27-5.75-3.27v6.54z" />
+    </svg>
   ),
-  nextjs: (props: IconProps) => (
-    <Image src="https://utfs.io/f/a8df6965-e6df-417a-ab0b-b3ad33d701d7-hcfblw.png" alt=""
-      width={100}
-      height={100}
-      className="bg-white p-1 rounded"
-    />
+
+  // AI Icon (Artificial Intelligence)
+  ai: (props: IconProps) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12h6M12 9v6" />
+    </svg>
   ),
+
+  
 };

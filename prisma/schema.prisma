@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  createdAt         DateTime @default(now())
+  email             String   @unique
+  password          String
+  username          String   @unique
+  subscriptionPlan  SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
+  subscriptionPlanId Int?
+  quizzes           Quiz[]
+  performance       Performance[]
+  resources         Resource[]
+  payments          Payment[]
+  invoices          Invoice[]
+}
+
+model SubscriptionPlan {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  name        String
+  description String
+  price       Float
+  currency    String
+  interval    String
+  users       User[]
+}
+
+model Resource {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  url         String
+  type        String   // "article" or "youtube"
+  title       String?
+  content     String?  // Extracted content or transcription
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  quizzes     Quiz[]
+}
+
+model Quiz {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  resource    Resource @relation(fields: [resourceId], references: [id])
+  resourceId  Int
+  mcqs        MCQ[]
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  performance Performance[]
+}
+
+model MCQ {
+  id          Int      @id @default(autoincrement())
+  question    String
+  optionA     String
+  optionB     String
+  optionC     String
+  optionD     String
+  correctOption String
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  quizId      Int
+}
+
+model Performance {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  quiz        Quiz     @relation(fields: [quizId], references: [id])
+  quizId      Int
+  correctAnswers Int
+  totalQuestions Int
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+}
+
+model Payment {
+  id              Int      @id @default(autoincrement())
+  createdAt       DateTime @default(now())
+  stripeId        String
+  email           String
+  amount          Float
+  currency        String
+  paymentDate     DateTime
+  user            User     @relation(fields: [userId], references: [id])
+  userId          Int
+}
+
+model Invoice {
+  id              Int      @id @default(autoincrement())
+  createdAt       DateTime @default(now())
+  invoiceId       String
+  subscriptionId  String
+  amountPaid      Float
+  amountDue       Float?
+  currency        String
+  status          String
+  user            User?    @relation(fields: [userId], references: [id])
+  userId          Int?
+}

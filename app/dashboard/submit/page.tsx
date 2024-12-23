@@ -49,7 +49,6 @@ export default function SubmitNewURL() {
         description: "Extracting content from URL...",
       });
 
-      // Use the API route instead of direct extraction
       const extractResponse = await fetch('/api/extract', {
         method: 'POST',
         headers: {
@@ -63,8 +62,9 @@ export default function SubmitNewURL() {
         throw new Error(error.error || 'Failed to extract content');
       }
 
-      const { content } = await extractResponse.json();
+      const { content, imageUrl } = await extractResponse.json();
       console.log("Content extracted:", content.substring(0, 100));
+      console.log("Image URL:", imageUrl);
 
       toast({
         title: "Generating Questions",
@@ -73,10 +73,9 @@ export default function SubmitNewURL() {
 
       const mcqs = await generateMCQs(content);
 
-      // Determine type based on URL
       const type = url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "article";
 
-      // Save to database with string user ID
+      // Save to database with image_url
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([
@@ -84,6 +83,7 @@ export default function SubmitNewURL() {
             url,
             type,
             content,
+            image_url: imageUrl,
             userId: user.id.toString(),
           },
         ])

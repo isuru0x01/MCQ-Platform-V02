@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     }
 
     let content: string;
+    let imageUrl: string | null = null;
     
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       const videoId = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/)?.[1];
@@ -20,11 +21,42 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Invalid YouTube URL" }, { status: 400 });
       }
 
+      // Get YouTube thumbnail
+      imageUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      
+      // Verify if maxresdefault exists, if not fall back to hqdefault
+      try {
+        const imageRes = await axios.get(imageUrl);
+        if (imageRes.status !== 200) {
+          imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        }
+      } catch {
+        imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      }
+
       const transcript = await YoutubeTranscript.fetchTranscript(videoId);
       content = transcript.map(t => t.text).join(' ');
     } else {
       const response = await axios.get(url);
       const $ = cheerio.load(response.data);
+      
+      // Try to find the main image
+      const possibleImages = [
+        $('meta[property="og:image"]').attr('content'),
+        $('meta[name="twitter:image"]').attr('content'),
+        $('article img').first().attr('src'),
+        $('.post-content img').first().attr('src'),
+        $('img').first().attr('src')
+      ].filter(Boolean);
+
+      if (possibleImages.length > 0) {
+        imageUrl = possibleImages[0];
+        // Convert relative URLs to absolute
+        if (imageUrl && !imageUrl.startsWith('http')) {
+          const baseUrl = new URL(url);
+          imageUrl = new URL(imageUrl, baseUrl.origin).toString();
+        }
+      }
       
       $('script').remove();
       $('style').remove();
@@ -41,7 +73,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ content });
+    return NextResponse.json({ content, imageUrl });
   } catch (error) {
     console.error('Extraction error:', error);
     return NextResponse.json(

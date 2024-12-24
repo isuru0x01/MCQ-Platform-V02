@@ -13,6 +13,7 @@ export async function POST(req: Request) {
 
     let content: string;
     let imageUrl: string | null = null;
+    let title: string;
     
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       const videoId = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/)?.[1];
@@ -20,6 +21,11 @@ export async function POST(req: Request) {
       if (!videoId) {
         return NextResponse.json({ error: "Invalid YouTube URL" }, { status: 400 });
       }
+
+      // Get YouTube video title
+      const videoResponse = await axios.get(`https://www.youtube.com/watch?v=${videoId}`);
+      const $ = cheerio.load(videoResponse.data);
+      title = $('title').text().replace('- YouTube', '').trim() || 'YouTube Video';
 
       // Get YouTube thumbnail
       imageUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
@@ -40,6 +46,13 @@ export async function POST(req: Request) {
       const response = await axios.get(url);
       const $ = cheerio.load(response.data);
       
+      // Try to find the article title
+      title = $('meta[property="og:title"]').attr('content') ||
+              $('meta[name="twitter:title"]').attr('content') ||
+              $('title').text() ||
+              $('h1').first().text() ||
+              'Article';
+
       // Try to find the main image
       const possibleImages = [
         $('meta[property="og:image"]').attr('content'),
@@ -73,7 +86,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ content, imageUrl });
+    return NextResponse.json({ content, imageUrl, title });
   } catch (error) {
     console.error('Extraction error:', error);
     return NextResponse.json(

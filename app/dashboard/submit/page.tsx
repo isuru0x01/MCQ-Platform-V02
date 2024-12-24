@@ -62,9 +62,10 @@ export default function SubmitNewURL() {
         throw new Error(error.error || 'Failed to extract content');
       }
 
-      const { content, imageUrl } = await extractResponse.json();
+      const { content, imageUrl, title } = await extractResponse.json();
       console.log("Content extracted:", content.substring(0, 100));
       console.log("Image URL:", imageUrl);
+      console.log("Title:", title);
 
       toast({
         title: "Generating Questions",
@@ -75,13 +76,14 @@ export default function SubmitNewURL() {
 
       const type = url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "article";
 
-      // Save to database with image_url
+      // Save to database with title
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([
           {
             url,
             type,
+            title,
             content,
             image_url: imageUrl,
             userId: user.id.toString(),

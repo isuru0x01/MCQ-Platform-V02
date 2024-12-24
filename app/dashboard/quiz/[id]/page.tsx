@@ -36,8 +36,9 @@ export default function QuizPage() {
   const [mcqs, setMcqs] = useState<MCQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
-  const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
+  const [answeredCount, setAnsweredCount] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
 
   useEffect(() => {
     async function fetchQuizData() {
@@ -59,6 +60,9 @@ export default function QuizPage() {
 
         if (mcqError) throw mcqError;
 
+        console.log('Fetched Resource Data:', resourceData);
+        console.log('Fetched MCQ Data:', mcqData);
+
         setResource(resourceData);
         setMcqs(mcqData || []);
       } catch (error) {
@@ -77,21 +81,42 @@ export default function QuizPage() {
   }, [params.id, toast]);
 
   const handleAnswerChange = (questionId: number, answer: number) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
+    const parsedAnswer = Number(answer);
+    console.log(`Answer Changed - Question ID: ${questionId}, Selected Answer: ${parsedAnswer}`);
+  
+    setAnswers((prev) => {
+      const newAnswers = { ...prev, [questionId]: parsedAnswer };
+      const mcq = mcqs.find((m) => m.id === questionId);
+  
+      if (mcq) {
+        const isCorrect = parsedAnswer === Number(mcq.correctOption);
+        console.log(
+            `Checking MCQ ID: ${mcq.id}, Answer: ${Number(newAnswers[mcq.id])}, Type: ${typeof newAnswers[mcq.id]}, Correct Option: ${mcq.correctOption}, Type: ${typeof mcq.correctOption}`
+          );
+  
+        if (!prev[questionId]) {
+          setAnsweredCount((prevCount) => prevCount + 1);
+        }
+  
+        setCorrectCount((prevCorrect) => {
+          if (prev[questionId] === mcq.correctOption && !isCorrect) return prevCorrect - 1;
+          if (prev[questionId] !== mcq.correctOption && isCorrect) return prevCorrect + 1;
+          return prevCorrect;
+        });
+  
+        const correctAnswers = mcqs.reduce((acc, mcq) => {
+          const selected = newAnswers[mcq.id] !== undefined ? Number(newAnswers[mcq.id]) : null;
+          return acc + (selected === Number(mcq.correctOption) ? 1 : 0);
+        }, 0);
+  
+        setScore((correctAnswers / mcqs.length) * 100);
+      }
+  
+      return newAnswers;
+    });
   };
-
-  const handleSubmit = () => {
-    const totalQuestions = mcqs.length;
-    const correctAnswers = mcqs.reduce((acc, mcq) => {
-      return acc + (answers[mcq.id] === mcq.correctOption ? 1 : 0);
-    }, 0);
-    
-    setScore((correctAnswers / totalQuestions) * 100);
-    setShowResults(true);
-  };
+  
+  
 
   const getYouTubeEmbedUrl = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
@@ -147,78 +172,109 @@ export default function QuizPage() {
       <div className="w-full md:w-1/2">
         <Card>
           <CardHeader>
-            <CardTitle>Quiz</CardTitle>
+            <CardTitle className="flex justify-between items-center">
+              <span>Quiz</span>
+              <div className="text-sm font-normal">
+                <span className="font-medium">Score: {score.toFixed(1)}%</span>
+                <span className="mx-2">•</span>
+                <span className="text-muted-foreground">
+                  {correctCount}/{mcqs.length} Correct
+                </span>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {mcqs.map((mcq, index) => (
-              <div key={mcq.id} className="space-y-4">
+          {mcqs.map((mcq, index) => (
+            <div key={mcq.id} className="space-y-4">
                 <h3 className="font-medium">
-                  {index + 1}. {mcq.question}
+                {index + 1}. {mcq.question}
                 </h3>
                 <RadioGroup
-                  onValueChange={(value) => handleAnswerChange(mcq.id, parseInt(value))}
-                  disabled={showResults}
+                onValueChange={(value) => handleAnswerChange(mcq.id, parseInt(value))}
+                value={answers[mcq.id]?.toString()}
                 >
-                  {[
+                {[
                     { option: 1, text: mcq.optionA },
                     { option: 2, text: mcq.optionB },
                     { option: 3, text: mcq.optionC },
                     { option: 4, text: mcq.optionD },
-                  ].map(({ option, text }) => (
+                ].map(({ option, text }) => (
                     <div key={option} className="flex items-center space-x-2">
-                      <RadioGroupItem
+                    <RadioGroupItem
                         value={option.toString()}
                         id={`q${mcq.id}-o${option}`}
-                        className={showResults ? 
-                          mcq.correctOption === option 
-                            ? "border-green-500" 
-                            : answers[mcq.id] === option 
-                              ? "border-red-500" 
-                              : ""
-                          : ""
-                        }
-                      />
-                      <Label
-                        htmlFor={`q${mcq.id}-o${option}`}
-                        className={showResults ?
-                          mcq.correctOption === option
-                            ? "text-green-500"
+                        className={answers[mcq.id] ?
+                        mcq.correctOption === option
+                            ? "border-green-500"
                             : answers[mcq.id] === option
-                              ? "text-red-500"
-                              : ""
-                          : ""
+                            ? "border-red-500"
+                            : ""
+                        : ""
                         }
-                      >
+                    />
+                    <Label
+                        htmlFor={`q${mcq.id}-o${option}`}
+                        className={answers[mcq.id] ?
+                        mcq.correctOption === option
+                            ? "text-green-500 font-medium"
+                            : answers[mcq.id] === option
+                            ? "text-red-500"
+                            : ""
+                        : ""
+                        }
+                    >
                         {text}
-                      </Label>
+                        {answers[mcq.id] && mcq.correctOption === option && (
+                        <span className="ml-2 text-green-500">✓</span>
+                        )}
+                    </Label>
                     </div>
-                  ))}
-                </RadioGroup>
-              </div>
-            ))}
+                ))}
+    </RadioGroup>
+    {answers[mcq.id] !== undefined &&
+  Number(answers[mcq.id]) === Number(mcq.correctOption) && (
+    <>
+      {console.log(
+        `Rendering Correct Message for Question ID: ${mcq.id}, Selected Answer: ${Number(
+          answers[mcq.id]
+        )}, Correct Option: ${mcq.correctOption}`
+      )}
+      <p className="text-sm text-green-500 mt-2">
+        Correct! Well done.
+      </p>
+    </>
+)}
 
-            {!showResults ? (
-              <Button 
-                onClick={handleSubmit}
-                disabled={Object.keys(answers).length !== mcqs.length}
-                className="w-full mt-4"
-              >
-                Submit Quiz
-              </Button>
-            ) : (
-              <div className="mt-4 p-4 rounded-lg bg-muted">
-                <h3 className="font-semibold text-lg">
-                  Your Score: {score.toFixed(1)}%
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Correct Answers: {mcqs.reduce((acc, mcq) => acc + (answers[mcq.id] === mcq.correctOption ? 1 : 0), 0)}
-                  /{mcqs.length}
-                </p>
+{answers[mcq.id] !== undefined &&
+  Number(answers[mcq.id]) !== Number(mcq.correctOption) && (
+    <>
+      {console.log(
+        `Rendering Incorrect Message for Question ID: ${mcq.id}, Selected Answer: ${Number(
+          answers[mcq.id]
+        )}, Correct Option: ${mcq.correctOption}`
+      )}
+      <p className="text-sm text-red-500 mt-2">
+        Incorrect. The correct answer is option {mcq.correctOption}.
+      </p>
+    </>
+)}
+  </div>
+))}
+
+            <div className="mt-4 p-4 rounded-lg bg-muted">
+              <h3 className="font-semibold text-lg">
+                Progress: {answeredCount}/{mcqs.length} Questions Answered
+              </h3>
+              <div className="w-full bg-secondary rounded-full h-2.5 mt-2">
+                <div
+                  className="bg-primary rounded-full h-2.5 transition-all duration-300"
+                  style={{ width: `${(answeredCount / mcqs.length) * 100}%` }}
+                />
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
-} 
+}

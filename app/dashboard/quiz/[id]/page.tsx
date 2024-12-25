@@ -37,9 +37,8 @@ export default function QuizPage() {
   const [mcqs, setMcqs] = useState<MCQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
-  const [correctCount, setCorrectCount] = useState(0);
-  const [score, setScore] = useState(0);
   const { user } = useUser();
+  const [isPerformanceSubmitted, setIsPerformanceSubmitted] = useState(false);
 
   useEffect(() => {
     async function fetchQuizData() {
@@ -76,27 +75,6 @@ export default function QuizPage() {
     fetchQuizData();
   }, [params.id, toast]);
 
-  useEffect(() => {
-    let totalCorrect = 0;
-    mcqs.forEach((mcq) => {
-      if (answers[mcq.id] === mcq.correctOption.toString()) {
-        totalCorrect++;
-      }
-    });
-    setCorrectCount(totalCorrect);
-    const newScore = (totalCorrect / mcqs.length) * 100;
-    setScore(newScore);
-    console.log("Score Updated:", newScore);
-    console.log("Correct Answers:", totalCorrect);
-  }, [answers, mcqs]);
-
-  const handleAnswerChange = (questionId: number, answer: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
-  };
-
   const submitPerformance = async () => {
     try {
       const userId = user?.id?.toString();
@@ -109,9 +87,17 @@ export default function QuizPage() {
         return;
       }
 
+      // Calculate correctCount on the fly
+      const totalCorrect = mcqs.reduce((acc, mcq) => {
+        if (answers[mcq.id] === mcq.correctOption.toString()) {
+          return acc + 1;
+        }
+        return acc;
+      }, 0);
+
       const performanceData = {
-        quizid: params.id,
-        correctAnswers: correctCount,
+        quizId: parseInt(params.id as string),
+        correctAnswers: totalCorrect,
         totalQuestions: mcqs.length,
         userId: userId,
         createdAt: new Date().toISOString(),
@@ -138,6 +124,20 @@ export default function QuizPage() {
     }
   };
 
+  useEffect(() => {
+    if (mcqs.length > 0 && Object.keys(answers).length === mcqs.length && !isPerformanceSubmitted) {
+      submitPerformance();
+      setIsPerformanceSubmitted(true); // Prevent multiple submissions
+    }
+  }, [answers, mcqs, isPerformanceSubmitted]);
+
+  const handleAnswerChange = (questionId: number, answer: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
+  };
+
   const getYouTubeEmbedUrl = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
@@ -160,6 +160,17 @@ export default function QuizPage() {
   if (!resource) {
     return <div>Resource not found</div>;
   }
+
+  // Calculate correctCount on the fly for display
+  const correctCount = mcqs.reduce((acc, mcq) => {
+    if (answers[mcq.id] === mcq.correctOption.toString()) {
+      return acc + 1;
+    }
+    return acc;
+  }, 0);
+
+  // Calculate score on the fly
+  const score = mcqs.length > 0 ? (correctCount / mcqs.length) * 100 : 0;
 
   return (
     <div className="flex flex-col md:flex-row gap-6 p-6">

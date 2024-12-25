@@ -40,8 +40,26 @@ export async function POST(req: Request) {
         imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
 
-      const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-      content = transcript.map(t => t.text).join(' ');
+      try {
+        // Fetch transcript with language preference
+        const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
+          lang: 'en'  // Specify English language
+        });
+    
+        content = transcript.map(t => t.text).join(' ');
+    
+      } catch (error) {
+        // If the specific language request fails, you might want to 
+        // try fetching without language specification as fallback
+        try {
+          const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+          content = transcript.map(t => t.text).join(' ');
+        } catch (fallbackError) {
+          console.error('Error fetching transcript:', fallbackError);
+          throw new Error('Unable to fetch English transcript');
+        }
+      }
+
     } else {
       const response = await axios.get(url);
       const $ = cheerio.load(response.data);

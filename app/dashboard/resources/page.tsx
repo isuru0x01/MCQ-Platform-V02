@@ -62,25 +62,13 @@ export default function ProjectsPage() {
 
   const handleDelete = async (resourceId: number) => {
     try {
-      // Delete Quiz first (this will cascade delete MCQs)
-      const { error: quizError } = await supabaseClient
-        .from('Quiz')
-        .delete()
-        .eq('resourceId', resourceId);
-
-      if (quizError) throw quizError;
-
-      // Then delete the Resource
-      const { error: resourceError } = await supabaseClient
-        .from('Resource')
-        .delete()
-        .eq('id', resourceId);
-
-      if (resourceError) throw resourceError;
-
+      // Call the stored procedure to delete the resource and associated data
+      const { error } = await supabaseClient.rpc('delete_resource_and_associated_data', { resource_id: resourceId });
+      if (error) throw error;
+  
       // Update local state
       setResources(resources.filter(r => r.id !== resourceId));
-
+  
       toast({
         title: "Success",
         description: "Resource deleted successfully",

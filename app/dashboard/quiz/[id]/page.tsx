@@ -1,20 +1,21 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { supabaseClient } from '@/lib/supabaseClient';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { supabaseClient } from "@/lib/supabaseClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useUser } from "@clerk/nextjs";
 
 interface Resource {
   id: number;
   title: string;
   url: string;
-  type: 'youtube' | 'article';
+  type: "youtube" | "article";
   content: string;
   image_url: string | null;
 }
@@ -35,38 +36,33 @@ export default function QuizPage() {
   const [resource, setResource] = useState<Resource | null>(null);
   const [mcqs, setMcqs] = useState<MCQ[]>([]);
   const [loading, setLoading] = useState(true);
-  const [answers, setAnswers] = useState<{ [key: number]: number }>({});
-  const [score, setScore] = useState(0);
-  const [answeredCount, setAnsweredCount] = useState(0);
+  const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [correctCount, setCorrectCount] = useState(0);
+  const [score, setScore] = useState(0);
+  const { user } = useUser();
 
   useEffect(() => {
     async function fetchQuizData() {
       try {
-        // Fetch resource details
         const { data: resourceData, error: resourceError } = await supabaseClient
-          .from('Resource')
-          .select('*')
-          .eq('id', params.id)
+          .from("Resource")
+          .select("*")
+          .eq("id", params.id)
           .single();
 
         if (resourceError) throw resourceError;
 
-        // Fetch MCQs
         const { data: mcqData, error: mcqError } = await supabaseClient
-          .from('MCQ')
-          .select('*')
-          .eq('quizId', params.id);
+          .from("MCQ")
+          .select("*")
+          .eq("quizId", params.id);
 
         if (mcqError) throw mcqError;
-
-        console.log('Fetched Resource Data:', resourceData);
-        console.log('Fetched MCQ Data:', mcqData);
 
         setResource(resourceData);
         setMcqs(mcqData || []);
       } catch (error) {
-        console.error('Error fetching quiz data:', error);
+        console.error("Error fetching quiz data:", error);
         toast({
           title: "Error",
           description: "Failed to load quiz",
@@ -80,43 +76,67 @@ export default function QuizPage() {
     fetchQuizData();
   }, [params.id, toast]);
 
-  const handleAnswerChange = (questionId: number, answer: number) => {
-    const parsedAnswer = Number(answer);
-    console.log(`Answer Changed - Question ID: ${questionId}, Selected Answer: ${parsedAnswer}`);
-  
-    setAnswers((prev) => {
-      const newAnswers = { ...prev, [questionId]: parsedAnswer };
-      const mcq = mcqs.find((m) => m.id === questionId);
-  
-      if (mcq) {
-        const isCorrect = parsedAnswer === Number(mcq.correctOption);
-        console.log(
-            `Checking MCQ ID: ${mcq.id}, Answer: ${Number(newAnswers[mcq.id])}, Type: ${typeof newAnswers[mcq.id]}, Correct Option: ${mcq.correctOption}, Type: ${typeof mcq.correctOption}`
-          );
-  
-        if (!prev[questionId]) {
-          setAnsweredCount((prevCount) => prevCount + 1);
-        }
-  
-        setCorrectCount((prevCorrect) => {
-          if (prev[questionId] === mcq.correctOption && !isCorrect) return prevCorrect - 1;
-          if (prev[questionId] !== mcq.correctOption && isCorrect) return prevCorrect + 1;
-          return prevCorrect;
-        });
-  
-        const correctAnswers = mcqs.reduce((acc, mcq) => {
-          const selected = newAnswers[mcq.id] !== undefined ? Number(newAnswers[mcq.id]) : null;
-          return acc + (selected === Number(mcq.correctOption) ? 1 : 0);
-        }, 0);
-  
-        setScore((correctAnswers / mcqs.length) * 100);
+  useEffect(() => {
+    let totalCorrect = 0;
+    mcqs.forEach((mcq) => {
+      if (answers[mcq.id] === mcq.correctOption.toString()) {
+        totalCorrect++;
       }
-  
-      return newAnswers;
     });
+    setCorrectCount(totalCorrect);
+    const newScore = (totalCorrect / mcqs.length) * 100;
+    setScore(newScore);
+    console.log("Score Updated:", newScore);
+    console.log("Correct Answers:", totalCorrect);
+  }, [answers, mcqs]);
+
+  const handleAnswerChange = (questionId: number, answer: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
   };
-  
-  
+
+  const submitPerformance = async () => {
+    try {
+      const userId = user?.id?.toString();
+      if (!userId) {
+        toast({
+          title: "Error",
+          description: "User not logged in.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const performanceData = {
+        quizid: params.id,
+        correctAnswers: correctCount,
+        totalQuestions: mcqs.length,
+        userId: userId,
+        createdAt: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabaseClient
+        .from("Performance")
+        .insert([performanceData]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Performance data submitted successfully.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error submitting performance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit performance data.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getYouTubeEmbedUrl = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
@@ -143,14 +163,13 @@ export default function QuizPage() {
 
   return (
     <div className="flex flex-col md:flex-row gap-6 p-6">
-      {/* Left Panel - Video/Article */}
       <div className="w-full md:w-1/2">
         <Card>
           <CardHeader>
             <CardTitle>{resource.title}</CardTitle>
           </CardHeader>
           <CardContent>
-            {resource.type === 'youtube' ? (
+            {resource.type === "youtube" ? (
               <div className="relative pb-[56.25%] h-0">
                 <iframe
                   src={getYouTubeEmbedUrl(resource.url)}
@@ -168,7 +187,6 @@ export default function QuizPage() {
         </Card>
       </div>
 
-      {/* Right Panel - Quiz */}
       <div className="w-full md:w-1/2">
         <Card>
           <CardHeader>
@@ -184,91 +202,76 @@ export default function QuizPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-          {mcqs.map((mcq, index) => (
-            <div key={mcq.id} className="space-y-4">
+            {mcqs.map((mcq, index) => (
+              <div key={mcq.id} className="space-y-4">
                 <h3 className="font-medium">
-                {index + 1}. {mcq.question}
+                  {index + 1}. {mcq.question}
                 </h3>
                 <RadioGroup
-                onValueChange={(value) => handleAnswerChange(mcq.id, parseInt(value))}
-                value={answers[mcq.id]?.toString()}
+                  onValueChange={(value) => handleAnswerChange(mcq.id, value)}
+                  value={answers[mcq.id]}
                 >
-                {[
+                  {[
                     { option: 1, text: mcq.optionA },
                     { option: 2, text: mcq.optionB },
                     { option: 3, text: mcq.optionC },
                     { option: 4, text: mcq.optionD },
-                ].map(({ option, text }) => (
+                  ].map(({ option, text }) => (
                     <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem
+                      <RadioGroupItem
                         value={option.toString()}
                         id={`q${mcq.id}-o${option}`}
-                        className={answers[mcq.id] ?
-                        mcq.correctOption === option
-                            ? "border-green-500"
-                            : answers[mcq.id] === option
-                            ? "border-red-500"
+                        className={
+                          answers[mcq.id]
+                            ? mcq.correctOption.toString() === option.toString()
+                              ? "border-green-500"
+                              : answers[mcq.id] === option.toString()
+                              ? "border-red-500"
+                              : ""
                             : ""
-                        : ""
                         }
-                    />
-                    <Label
+                      />
+                      <Label
                         htmlFor={`q${mcq.id}-o${option}`}
-                        className={answers[mcq.id] ?
-                        mcq.correctOption === option
-                            ? "text-green-500 font-medium"
-                            : answers[mcq.id] === option
-                            ? "text-red-500"
+                        className={
+                          answers[mcq.id]
+                            ? mcq.correctOption.toString() === option.toString()
+                              ? "text-green-500 font-medium"
+                              : answers[mcq.id] === option.toString()
+                              ? "text-red-500"
+                              : ""
                             : ""
-                        : ""
                         }
-                    >
+                      >
                         {text}
-                        {answers[mcq.id] && mcq.correctOption === option && (
-                        <span className="ml-2 text-green-500">✓</span>
+                        {answers[mcq.id] && mcq.correctOption.toString() === answers[mcq.id] && (
+                          <span className="ml-2 text-green-500">✓</span>
                         )}
-                    </Label>
+                      </Label>
                     </div>
-                ))}
-    </RadioGroup>
-    {answers[mcq.id] !== undefined &&
-  Number(answers[mcq.id]) === Number(mcq.correctOption) && (
-    <>
-      {console.log(
-        `Rendering Correct Message for Question ID: ${mcq.id}, Selected Answer: ${Number(
-          answers[mcq.id]
-        )}, Correct Option: ${mcq.correctOption}`
-      )}
-      <p className="text-sm text-green-500 mt-2">
-        Correct! Well done.
-      </p>
-    </>
-)}
-
-{answers[mcq.id] !== undefined &&
-  Number(answers[mcq.id]) !== Number(mcq.correctOption) && (
-    <>
-      {console.log(
-        `Rendering Incorrect Message for Question ID: ${mcq.id}, Selected Answer: ${Number(
-          answers[mcq.id]
-        )}, Correct Option: ${mcq.correctOption}`
-      )}
-      <p className="text-sm text-red-500 mt-2">
-        Incorrect. The correct answer is option {mcq.correctOption}.
-      </p>
-    </>
-)}
-  </div>
-))}
+                  ))}
+                </RadioGroup>
+                {answers[mcq.id] !== undefined &&
+                  answers[mcq.id] === mcq.correctOption.toString() && (
+                    <p className="text-sm text-green-500 mt-2">Correct! Well done.</p>
+                  )}
+                {answers[mcq.id] !== undefined &&
+                  answers[mcq.id] !== mcq.correctOption.toString() && (
+                    <p className="text-sm text-red-500 mt-2">
+                      Incorrect. The correct answer is option {mcq.correctOption}.
+                    </p>
+                  )}
+              </div>
+            ))}
 
             <div className="mt-4 p-4 rounded-lg bg-muted">
               <h3 className="font-semibold text-lg">
-                Progress: {answeredCount}/{mcqs.length} Questions Answered
+                Progress: {Object.keys(answers).length}/{mcqs.length} Questions Answered
               </h3>
               <div className="w-full bg-secondary rounded-full h-2.5 mt-2">
                 <div
                   className="bg-primary rounded-full h-2.5 transition-all duration-300"
-                  style={{ width: `${(answeredCount / mcqs.length) * 100}%` }}
+                  style={{ width: `${(Object.keys(answers).length / mcqs.length) * 100}%` }}
                 />
               </div>
             </div>

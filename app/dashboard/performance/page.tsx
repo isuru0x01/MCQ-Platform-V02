@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,22 +6,18 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Database, Tables } from '@/lib/supabase-types';
 
-// Define the interface for performance data
-interface PerformanceData {
-  id: string;
-  correctAnswers: number;
-  totalQuestions: number;
-  createdAt: string;
-  quizId: string;
-  Quiz: { Resource: { title: string }[] }[];
+type PerformanceData = Tables<'Performance'> & {
+  Quiz: (Tables<'Quiz'> & {
+    Resource: Tables<'Resource'>[];
+  })[];
   title: string;
-}
+};
 
 export default function PerformancePage() {
   const { user } = useUser();
   const { toast } = useToast();
-  // Specify the type for performanceData
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,8 +32,7 @@ export default function PerformancePage() {
         });
         return;
       }
-  
-      // Fetch performance data with joined quiz and resource data
+
       const { data, error } = await supabaseClient
         .from('Performance')
         .select(`
@@ -48,6 +41,7 @@ export default function PerformancePage() {
           totalQuestions,
           createdAt,
           quizId,
+          userId,
           Quiz (
             Resource (
               title
@@ -56,15 +50,14 @@ export default function PerformancePage() {
         `)
         .eq('userId', userId)
         .order('createdAt', { ascending: false });
-  
+
       if (error) throw error;
-  
-      // Map the data to include the title from the Resource table
+
       const performanceWithTitle = data.map((performance) => ({
         ...performance,
-        title: performance.Quiz && performance.Quiz.Resource ? performance.Quiz.Resource.title : 'N/A',
+        title: performance.Quiz?.[0]?.Resource?.[0]?.title || 'N/A',
       }));
-  
+
       setPerformanceData(performanceWithTitle);
     } catch (error) {
       console.error("Error fetching performance data:", error);
@@ -149,26 +142,26 @@ export default function PerformancePage() {
             </tr>
           </thead>
           <tbody>
-          {performanceData.map((performance) => (
-  <tr key={performance.id} className="border">
-    <td className="p-2 border">{performance?.title}</td>
-    <td className="p-2 border">{formatDate(performance.createdAt)}</td>
-    <td className="p-2 border">
-      {calculateScore(performance.correctAnswers, performance.totalQuestions)}%
-    </td>
-    <td className="p-2 border">
-      <Link href={`/dashboard/quiz/${performance.quizId}`}>
-        <Button>Retake</Button>
-      </Link>
-      <Button
-        onClick={() => confirmDelete(performance.id)}
-        className="ml-2 bg-red-500 hover:bg-red-600"
-      >
-        Delete
-      </Button>
-    </td>
-  </tr>
-))}
+            {performanceData.map((performance) => (
+              <tr key={performance.id} className="border">
+                <td className="p-2 border">{performance.title}</td>
+                <td className="p-2 border">{formatDate(performance.createdAt)}</td>
+                <td className="p-2 border">
+                  {calculateScore(performance.correctAnswers, performance.totalQuestions)}%
+                </td>
+                <td className="p-2 border">
+                  <Link href={`/dashboard/quiz/${performance.quizId}`}>
+                    <Button>Retake</Button>
+                  </Link>
+                  <Button
+                    onClick={() => confirmDelete(performance.id)}
+                    className="ml-2 bg-red-500 hover:bg-red-600"
+                  >
+                    Delete
+                  </Button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </CardContent>

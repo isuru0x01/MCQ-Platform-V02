@@ -8,10 +8,31 @@ import Link from 'next/link';
 import { BarChartBetter } from './_components/bar-chart-better';
 import { supabaseClient } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import placeholderImage from '@/public/placeholder.png';
+
 
 export default function Dashboard() {
-  const [resources, setResources] = useState([]);
-  const [performanceData, setPerformanceData] = useState([]);
+
+  interface Resource {
+    id: number;
+    url: string;
+    type: 'youtube' | 'article';
+    title: string;
+    image_url: string | null;
+    createdAt: string;
+    content: string;
+  }
+  
+  interface Performance {
+    id: string;
+    createdAt: string;
+    quizId: number;
+    correctAnswers: number;
+    totalQuestions: number;
+    userId: string;
+  }
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [performanceData, setPerformanceData] = useState<Performance[]>([]);
 
   useEffect(() => {
     fetchResources();
@@ -31,13 +52,13 @@ export default function Dashboard() {
       console.error('Error fetching resources:', error);
     }
   };
-
+  
   const fetchPerformance = async () => {
     try {
       const { data: performanceData, error } = await supabaseClient
         .from('Performance')
         .select('*')
-        .order('createdat', { ascending: false })
+        .order('createdAt', { ascending: false })
         .limit(10);
       if (error) throw error;
       setPerformanceData(performanceData || []);

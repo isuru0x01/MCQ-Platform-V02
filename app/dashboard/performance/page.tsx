@@ -16,7 +16,8 @@ interface PerformanceData {
   totalQuestions: number;
   createdAt: string;
   quizId: string;
-  Quiz: { title: string };
+  Quiz: { Resource: { title: string }[] }[];
+  title: string;
 }
 
 export default function PerformancePage() {
@@ -61,7 +62,7 @@ export default function PerformancePage() {
       // Map the data to include the title from the Resource table
       const performanceWithTitle = data.map((performance) => ({
         ...performance,
-        title: performance.Quiz?.Resource?.title || 'N/A',
+        title: performance.Quiz && performance.Quiz.Resource ? performance.Quiz.Resource.title : 'N/A',
       }));
   
       setPerformanceData(performanceWithTitle);

@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       ].filter(Boolean);
 
       if (possibleImages.length > 0) {
-        imageUrl = possibleImages[0];
+        imageUrl = possibleImages[0] || null;
         // Convert relative URLs to absolute
         if (imageUrl && !imageUrl.startsWith('http')) {
           const baseUrl = new URL(url);

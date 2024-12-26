@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { extractYouTubeTranscription, scrapeArticleContent } from "@/lib/utils";
 import { generateMCQs } from "@/lib/ai";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from 'next/navigation'; // Step 1: Import useRouter
 
 const FormSchema = z.object({
   url: z.string().url("Please enter a valid URL"),
@@ -20,6 +21,7 @@ export default function SubmitNewURL() {
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const { toast } = useToast();
+  const router = useRouter(); // Step 2: Obtain router instance
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -79,16 +81,14 @@ export default function SubmitNewURL() {
       // Save to database with title
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
-        .insert([
-          {
-            url,
-            type,
-            title,
-            content,
-            image_url: imageUrl,
-            userId: user.id.toString(),
-          },
-        ])
+        .insert([{
+          url,
+          type,
+          title,
+          content,
+          image_url: imageUrl,
+          userId: user.id.toString(),
+        }])
         .select("id")
         .single();
 
@@ -97,14 +97,14 @@ export default function SubmitNewURL() {
         throw resourceError;
       }
 
+      console.log("Resource ID:", resource.id); // Verify resource.id is available
+
       const { error: quizError } = await supabaseClient
         .from("Quiz")
-        .insert([
-          {
-            resourceId: resource.id,
-            userId: user.id.toString(),
-          },
-        ])
+        .insert([{
+          resourceId: resource.id,
+          userId: user.id.toString(),
+        }])
         .select("id")
         .single();
 
@@ -132,6 +132,10 @@ export default function SubmitNewURL() {
         title: "Success!",
         description: "Resource and questions have been saved.",
       });
+
+      // Step 3: Redirect after successful submission
+      router.push(`/dashboard/quiz/${resource.id}`); // Redirect to the resource page
+
     } catch (error) {
       console.error("Error in onSubmit:", error);
       toast({

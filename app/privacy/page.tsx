@@ -7,7 +7,7 @@ export default function PrivacyPage() {
         <h1 className="text-3xl font-bold mb-4">Privacy Policy</h1>
         <div className="max-w-4xl text-left">
           <p className="mb-4">
-            Your privacy is important to us. It is MCQ Lab's policy to respect your privacy regarding any information we may collect from you across our website, <a href="mcqlabs.click" className="text-blue-500">mcqlabs.click</a>, and other sites we own and operate.
+            Your privacy is important to us. It is MCQ Lab&apos;s policy to respect your privacy regarding any information we may collect from you across our website, <a href="mcqlabs.click" className="text-blue-500">mcqlabs.click</a>, and other sites we own and operate.
           </p>
           <p className="mb-4">
             <strong>1. Information We Collect</strong>
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
             We collect and use your information only where:
           </p>
           <ul className="list-disc list-inside mb-4">
-            <li>It's necessary to provide and operate our services.</li>
+            <li>It&apos;s necessary to provide and operate our services.</li>
             <li>It satisfies a legitimate interest (which is not overridden by your data protection interests).</li>
             <li>We have your consent to do so.</li>
             <li>We are legally obligated to collect or disclose the data.</li>

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
@@ -8,20 +8,46 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Database, Tables } from '@/lib/supabase-types';
 
-type PerformanceData = Tables<'Performance'> & {
-  Quiz: (Tables<'Quiz'> & {
-    Resource: Tables<'Resource'>[];
-  })[];
-  title: string;
+type Resource = {
+  id: number;
+  title: string | null;
+  content: string | null;
+  image_url: string | null;
+  type: string;
+  url: string;
+  userId: string;
+  createdAt: string;
+};
+
+type Quiz = {
+  id: number;
+  createdAt: string;
+  resourceId: number;
+  userId: string;
+  Resource: Resource[];
+};
+
+type Performance = {
+  id: string;
+  correctAnswers: number;
+  totalQuestions: number;
+  createdAt: string;
+  quizId: number;
+  userId: string;
+  Quiz: Quiz | null;
+  title: string | null;
 };
 
 export default function PerformancePage() {
   const { user } = useUser();
   const { toast } = useToast();
-  const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
+  const [performanceData, setPerformanceData] = useState<Performance[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPerformanceData();
+  }, [user]);
 
   const fetchPerformanceData = async () => {
     try {
@@ -34,32 +60,52 @@ export default function PerformancePage() {
         });
         return;
       }
-
+  
       const { data, error } = await supabaseClient
-        .from('Performance')
-        .select(`
-          id,
-          correctAnswers,
-          totalQuestions,
-          createdAt,
-          quizId,
-          userId,
-          Quiz (
-            Resource (
-              title
+        .from("Performance")
+        .select(
+          `
+            id,
+            correctAnswers,
+            totalQuestions,
+            createdAt,
+            quizId,
+            userId,
+            Quiz (
+              id,
+              createdAt,
+              resourceId,
+              userId,
+              Resource (
+                id,
+                title,
+                content,
+                image_url,
+                type,
+                url,
+                userId,
+                createdAt
+              )
             )
-          )
-        `)
-        .eq('userId', userId)
-        .order('createdAt', { ascending: false });
-
+          `
+        )
+        .eq("userId", userId)
+        .order("createdAt", { ascending: false });
+  
       if (error) throw error;
-
-      const performanceWithTitle = data.map((performance) => ({
-        ...performance,
-        title: performance.Quiz?.[0]?.Resource?.[0]?.title || 'N/A',
-      }));
-
+  
+      console.log("Performance Data:", data); // Debugging: Verify structure
+  
+      const performanceWithTitle = data.map((performance) => {
+        // Directly access Resource title since it's an object
+        const resourceTitle = performance.Quiz?.Resource?.title || "N/A";
+  
+        return {
+          ...performance,
+          title: resourceTitle,
+        };
+      });
+  
       setPerformanceData(performanceWithTitle);
     } catch (error) {
       console.error("Error fetching performance data:", error);
@@ -72,32 +118,41 @@ export default function PerformancePage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchPerformanceData();
-  }, [user, toast]);
+  
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    return date.toLocaleDateString();
   };
 
-  const calculateScore = (correct: number, total: number) => {
-    return ((correct / total) * 100).toFixed(1);
+  const calculateScore = (correct: number, total: number) =>
+    ((correct / total) * 100).toFixed(2);
+
+  const confirmDelete = (performanceId: string) => {
+    if (
+      window.confirm("Are you sure you want to delete this performance record?")
+    ) {
+      handleDelete(performanceId);
+    }
   };
 
   const handleDelete = async (performanceId: string) => {
     try {
       const { error } = await supabaseClient
-        .from('Performance')
+        .from("Performance")
         .delete()
-        .eq('id', performanceId);
+        .eq("id", performanceId);
+
       if (error) throw error;
+
       toast({
         title: "Success",
-        description: "Performance record deleted.",
+        description: "Performance record deleted successfully.",
       });
-      fetchPerformanceData(); // Refresh data
+
+      setPerformanceData((prev) =>
+        prev.filter((performance) => performance.id !== performanceId)
+      );
     } catch (error) {
       console.error("Error deleting performance record:", error);
       toast({
@@ -105,12 +160,6 @@ export default function PerformancePage() {
         description: "Failed to delete performance record.",
         variant: "destructive",
       });
-    }
-  };
-
-  const confirmDelete = (performanceId: string) => {
-    if (window.confirm("Are you sure you want to delete this performance record?")) {
-      handleDelete(performanceId);
     }
   };
 
@@ -147,9 +196,15 @@ export default function PerformancePage() {
             {performanceData.map((performance) => (
               <tr key={performance.id} className="border">
                 <td className="p-2 border">{performance.title}</td>
-                <td className="p-2 border">{formatDate(performance.createdAt)}</td>
                 <td className="p-2 border">
-                  {calculateScore(performance.correctAnswers, performance.totalQuestions)}%
+                  {formatDate(performance.createdAt)}
+                </td>
+                <td className="p-2 border">
+                  {calculateScore(
+                    performance.correctAnswers,
+                    performance.totalQuestions
+                  )}
+                  %
                 </td>
                 <td className="p-2 border">
                   <Link href={`/dashboard/quiz/${performance.quizId}`}>

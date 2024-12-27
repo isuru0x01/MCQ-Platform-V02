@@ -33,10 +33,10 @@ export default function TermsPage() {
 
           <h2 className="text-2xl font-semibold mt-6 mb-4">4. Payments and Refunds</h2>
           <p className="mb-4">
-            If you purchase a subscription or other paid services, you agree to pay all applicable fees. Payments are processed through secure third-party payment gateways (e.g., Stripe, PayPal). We do not store your payment information.
+            If you purchase a subscription or other paid services, you agree to pay all applicable fees. Payments are processed through secure third-party payment gateways. We do not store your payment information.
           </p>
           <p className="mb-4">
-            Refunds are issued at our sole discretion and in accordance with our Refund Policy. If you believe you are entitled to a refund, please contact us at <a href="mailto:support@mcqlab.com" className="text-blue-500">support@mcqlab.com</a>.
+            Refunds are issued at our sole discretion and in accordance with our Refund Policy. If you believe you are entitled to a refund, please contact us at <a href="mailto:info@mcqlab.com" className="text-blue-500">info@mcqlab.com</a>.
           </p>
           <p className="mb-4">
             For subscription-based services, you can cancel your subscription at any time. However, no refunds will be issued for the remainder of the billing cycle unless otherwise specified in our Refund Policy.

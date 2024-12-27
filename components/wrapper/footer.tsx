@@ -80,15 +80,19 @@ export default function Footer() {
                         <div className="mt-8 border-t   pt-8">
                             <ul className="flex flex-wrap gap-4 text-xs">
                                 <li>
-                                    <a href="/privacy" target="_blank" className="transition hover:opacity-75">Terms & Conditions </a>
+                                    <a href="/terms" className="transition hover:opacity-75">Terms & Conditions </a>
                                 </li>
 
                                 <li>
-                                    <a href="/" target="_blank" className="transition hover:opacity-75">Privacy Policy </a>
+                                    <a href="/privacy" className="transition hover:opacity-75">Privacy Policy </a>
+                                </li>
+
+                                <li>
+                                    <a href="/refund-policy" className="transition hover:opacity-75">Refund Policy </a>
                                 </li>
                             </ul>
 
-                            <p className="mt-8 text-xs  ">&copy; 2024. SomeCompany LLC. All rights reserved.</p>
+                            <p className="mt-8 text-xs  ">&copy; 2024. Nexlution. All rights reserved.</p>
                         </div>
                     </div>
                 </div>

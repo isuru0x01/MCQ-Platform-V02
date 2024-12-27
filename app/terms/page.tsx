@@ -7,7 +7,7 @@ export default function TermsPage() {
         <h1 className="text-3xl font-bold mb-4">Terms and Conditions</h1>
         <div className="max-w-4xl text-left">
           <p className="mb-4">
-            Welcome to MCQ Lab! These Terms and Conditions ("Terms") govern your use of our website and services. By accessing or using our platform, you agree to comply with and be bound by these Terms. If you do not agree with these Terms, please do not use our services.
+            Welcome to MCQ Lab! These Terms and Conditions (&quot;Terms&quot;) govern your use of our website and services. By accessing or using our platform, you agree to comply with and be bound by these Terms. If you do not agree with these Terms, please do not use our services.
           </p>
 
           <h2 className="text-2xl font-semibold mt-6 mb-4">1. Acceptance of Terms</h2>
@@ -17,7 +17,7 @@ export default function TermsPage() {
 
           <h2 className="text-2xl font-semibold mt-6 mb-4">2. Services</h2>
           <p className="mb-4">
-            MCQ Lab provides an AI-powered platform that generates multiple-choice questions (MCQs) based on educational content submitted by users. We reserve the right to modify, suspend, or discontinue any part of our services at any time without notice. While we strive to ensure the accuracy of generated content, it is provided "as-is" and may not always be error-free or perfectly suited to all educational needs.
+            MCQ Lab provides an AI-powered platform that generates multiple-choice questions (MCQs) based on educational content submitted by users. We reserve the right to modify, suspend, or discontinue any part of our services at any time without notice. While we strive to ensure the accuracy of generated content, it is provided &quot;as-is&quot; and may not always be error-free or perfectly suited to all educational needs.
           </p>
 
           <h2 className="text-2xl font-semibold mt-6 mb-4">3. User Responsibilities</h2>
@@ -68,7 +68,7 @@ export default function TermsPage() {
 
           <h2 className="text-2xl font-semibold mt-6 mb-4">8. Governing Law</h2>
           <p className="mb-4">
-            These Terms are governed by the laws of [Your Country/State], without regard to its conflict of law principles. Any disputes arising from these Terms will be resolved in the courts of [Your Country/State].
+            These Terms are governed by the laws of Sri Lanka, without regard to its conflict of law principles. Any disputes arising from these Terms will be resolved in the courts of Sri Lanka.
           </p>
 
           <h2 className="text-2xl font-semibold mt-6 mb-4">9. Changes to Terms</h2>

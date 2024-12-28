@@ -6,6 +6,8 @@ import { youtube_v3 } from "@googleapis/youtube";
 import { Buffer } from "buffer";
 import protobuf from "protobufjs";
 
+export const maxDuration = 60;
+
 // Initialize YouTube Data API client
 const youtubeClient = new youtube_v3.Youtube({
   auth: process.env.YOUTUBE_API_KEY,

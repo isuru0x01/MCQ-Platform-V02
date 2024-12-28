@@ -13,6 +13,8 @@ import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from 'next/navigation'; // Step 1: Import useRouter
 
+export const maxDuration = 60;
+
 const FormSchema = z.object({
   url: z.string().url("Please enter a valid URL"),
 });

@@ -24,7 +24,7 @@ export default function RefundPolicyPage() {
           </p>
           <ul className="list-disc list-inside mb-4">
             <li>Change of mind or dissatisfaction with the service.</li>
-            <li>Failure to use the service due to user error or technical issues on the user's side.</li>
+            <li>Failure to use the service due to user error or technical issues on the user&apos;s side.</li>
             <li>Partial use of the service during the subscription period.</li>
           </ul>
 

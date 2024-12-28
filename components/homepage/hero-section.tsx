@@ -22,7 +22,7 @@ export default function HeroSection() {
                 </Link>
 
                 <Link
-                    href="https://discord.gg/HUcHdrrDgY"
+                    href="https://x.com/mcqlabs"
                     target='_blank'
                     className="mt-5"
                     aria-label="Join Conversation (opens in a new tab)"

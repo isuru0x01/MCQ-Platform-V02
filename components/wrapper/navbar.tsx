@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import Link from 'next/link';
 import * as React from "react";
 import { GiHamburgerMenu } from "react-icons/gi";
@@ -40,7 +40,7 @@ export default function NavBar() {
                     </SheetTrigger>
                     <SheetContent side="left">
                         <SheetHeader>
-                            <SheetTitle>Next Starter</SheetTitle>
+                            <SheetTitle>MCQ Labs</SheetTitle>
                         </SheetHeader>
                         <div className="flex flex-col space-y-3 mt-[1rem]">
                             <DialogClose asChild>
@@ -49,10 +49,18 @@ export default function NavBar() {
                                 </Link>
                             </DialogClose>
                             <DialogClose asChild>
-                                <Link href="/dashboard" legacyBehavior passHref className="cursor-pointer">
-                                    <Button variant="outline">
-                                        Dashboard
-                                    </Button>
+                                <Link href="/about">
+                                    <Button variant="outline" className="w-full">About</Button>
+                                </Link>
+                            </DialogClose>
+                            <DialogClose asChild>
+                                <Link href="/contact">
+                                    <Button variant="outline" className="w-full">Contact</Button>
+                                </Link>
+                            </DialogClose>
+                            <DialogClose asChild>
+                                <Link href="/dashboard">
+                                    <Button variant="outline" className="w-full">Dashboard</Button>
                                 </Link>
                             </DialogClose>
                         </div>
@@ -62,30 +70,12 @@ export default function NavBar() {
             </div>
             <NavigationMenu>
                 <NavigationMenuList className="max-[825px]:hidden flex gap-3 w-[100%] justify-between">
-                    <Link href="/" className="pl-2 flex items-center" aria-label="Home">
+                    <Link href="/" className="pl-2 pr-2 flex items-center" aria-label="Home">
                         <BlocksIcon aria-hidden="true" />
-                        <span className="sr-only">Home</span>
+                        <span className="font-bold ml-2">MCQ Labs</span>
                     </Link>
                 </NavigationMenuList>
                 <NavigationMenuList>
-                    <NavigationMenuItem className="max-[825px]:hidden ml-5">
-                        <NavigationMenuTrigger className="dark:bg-black dark:bg-opacity-50">
-                            Features
-                        </NavigationMenuTrigger>
-                        <NavigationMenuContent>
-                            <ul className="flex flex-col w-[400px] gap-3 p-4 lg:w-[500px]">
-                                {components.map((component, index) => (
-                                    <ListItem
-                                        key={index}
-                                        title={component.title}
-                                        href={component.href}
-                                    >
-                                        {component.description}
-                                    </ListItem>
-                                ))}
-                            </ul>
-                        </NavigationMenuContent>
-                    </NavigationMenuItem>
                     <NavigationMenuItem className="max-[825px]:hidden">
                         <Link href="/dashboard" legacyBehavior passHref>
                             <Button variant="ghost">
@@ -93,6 +83,21 @@ export default function NavBar() {
                             </Button>
                         </Link>
                     </NavigationMenuItem>
+                    <NavigationMenuItem className="max-[825px]:hidden">
+                        <Link href="/about" legacyBehavior passHref>
+                            <Button variant="ghost">
+                                About
+                            </Button>
+                        </Link>
+                    </NavigationMenuItem>
+                    <NavigationMenuItem className="max-[825px]:hidden">
+                        <Link href="/contact" legacyBehavior passHref>
+                            <Button variant="ghost">
+                                Contact
+                            </Button>
+                        </Link>
+                    </NavigationMenuItem>
+                    
                 </NavigationMenuList>
             </NavigationMenu>
             <div className="flex items-center gap-2 max-[825px]:hidden">

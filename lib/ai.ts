@@ -2,8 +2,8 @@
 
 import OpenAI from "openai";
 import Together from "together-ai";
+import { encode, decode } from "gpt-tokenizer"; // For token counting
 const Groq = require('groq-sdk');
-
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY, // This is the default and can be omitted
@@ -15,32 +15,69 @@ const together = new Together({ apiKey: process.env.TOGETHER_API_KEY });
 // Groq AI Configuration
 const groq = new Groq();
 
+/**
+ * Truncate text to a maximum number of tokens.
+ * @param {string} text - The input text.
+ * @param {number} maxTokens - The maximum number of tokens allowed.
+ * @returns {string} - The truncated text.
+ */
+function truncateText(text: string, maxTokens: number): string {
+  const tokens = encode(text); // Convert text to tokens
+  if (tokens.length <= maxTokens) {
+    return text; // Return the original text if it's within the limit
+  }
+  const truncatedTokens = tokens.slice(0, maxTokens); // Truncate tokens
+  return decode(truncatedTokens); // Convert tokens back to text
+}
+
+/**
+ * Get the token limit for a specific model.
+ * @param {string} model - The model name.
+ * @returns {number} - The token limit for the model.
+ */
+function getTokenLimit(model: string): number {
+  switch (model) {
+    case "o1-mini": // OpenAI model
+      return 64000;
+    case "meta-llama/Llama-3.3-70B-Instruct-Turbo": // Together AI model
+      return 5000;
+    case "llama-3.3-70b-versatile": // Groq model
+      return 6000;
+    default:
+      return 5000; // Default token limit
+  }
+}
+
 // Main function to generate MCQs
 export async function generateMCQs(content: string): Promise<any[]> {
-    const prompt = `Generate exactly 20 multiple choice questions in JSON format based on this content: ${content}
+  const prompt = `Generate exactly 20 multiple choice questions in JSON format based on this content: ${content}
 
-        Return ONLY a JSON array with this exact structure:
-        [
-        {
-            "question": "What is...",
-            "correct_answer": "The correct answer",
-            "options": ["Option 1", "The correct answer", "Option 3", "Option 4"]
-        }
-        ]
+      Return ONLY a JSON array with this exact structure:
+      [
+      {
+          "question": "What is...",
+          "correct_answer": "The correct answer",
+          "options": ["Option 1", "The correct answer", "Option 3", "Option 4"]
+      }
+      ]
 
-        Requirements:
-        1. Return ONLY the JSON array, no other text
-        2. Each question must have exactly 4 options
-        3. The correct_answer must be included in the options array
-        4. Generate exactly 20 questions`;
-  
-    try {
+      Requirements:
+      1. Return ONLY the JSON array, no other text
+      2. Each question must have exactly 4 options
+      3. The correct_answer must be included in the options array
+      4. Generate exactly 20 questions`;
+
+  try {
     // Attempt to generate MCQs using OpenAI
+    const model = "o1-mini";
+    const tokenLimit = getTokenLimit(model);
+    const truncatedContent = truncateText(content, tokenLimit);
+
     const completion = await client.chat.completions.create({
-      model: "o1-mini",
-      messages: [{ role: 'user', content: prompt }],
+      model: model,
+      messages: [{ role: 'user', content: prompt.replace("${content}", truncatedContent) }],
       temperature: 0.8,
-      max_tokens: 1000,
+      max_tokens: tokenLimit,
     });
 
     // Parse the response
@@ -48,27 +85,30 @@ export async function generateMCQs(content: string): Promise<any[]> {
     if (!response) throw new Error('No response from OpenAI');
 
     return JSON.parse(response);
-    
+
   } catch (error) {
     console.error("OpenAI Error:", error);
     console.log("Falling back to Together AI...");
 
     try {
       // Fallback to Together AI
-      console.log('Falling back to Together AI...');
+      const model = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+      const tokenLimit = getTokenLimit(model);
+      const truncatedContent = truncateText(content, tokenLimit);
+
       const response = await together.chat.completions.create({
         messages: [
           { role: "system", content: "You are a JSON generator. Always respond with valid JSON arrays only, no additional text." },
-          { role: "user", content: prompt }
+          { role: "user", content: prompt.replace("${content}", truncatedContent) }
         ],
-        model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-        max_tokens: 2048,
+        model: model,
+        max_tokens: tokenLimit,
         temperature: 0.7,
         top_p: 0.7,
         top_k: 50,
         repetition_penalty: 1,
-        stop: ["<|eot_id|>","<|eom_id|>"]
-      });      
+        stop: ["<|eot_id|>", "<|eom_id|>"]
+      });
 
       const responseContent = response.choices[0]?.message?.content;
       if (!responseContent) {
@@ -77,7 +117,7 @@ export async function generateMCQs(content: string): Promise<any[]> {
       }
 
       console.log('Raw response:', responseContent);
-      
+
       // Clean up the response
       const cleanedContent = responseContent
         .replace(/```json\s*/g, '')
@@ -85,9 +125,9 @@ export async function generateMCQs(content: string): Promise<any[]> {
         .replace(/^[\s\n]*Here.*?\[/s, '[')  // Remove any leading text
         .replace(/\][\s\n]*$/g, ']')         // Remove any trailing text
         .trim();
-      
+
       console.log('Cleaned response:', cleanedContent);
-      
+
       try {
         const questions = JSON.parse(cleanedContent);
         if (!Array.isArray(questions) || questions.length === 0) {
@@ -109,16 +149,20 @@ export async function generateMCQs(content: string): Promise<any[]> {
 
       try {
         // Fallback to Groq
+        const model = "llama-3.3-70b-versatile";
+        const tokenLimit = getTokenLimit(model);
+        const truncatedContent = truncateText(content, tokenLimit);
+
         const groqResponse = await groq.chat.completions.create({
           messages: [
             {
               role: "user",
-              content: `Generate 20 MCQs from the following content:\n${content}`,
+              content: `Generate 20 MCQs from the following content:\n${truncatedContent}`,
             },
           ],
-          model: "llama-3.3-70b-versatile",
+          model: model,
           temperature: 1,
-          max_tokens: 1000,
+          max_tokens: tokenLimit,
           top_p: 1,
           stream: false, // Set to false for simplicity
         });

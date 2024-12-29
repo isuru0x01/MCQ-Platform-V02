@@ -28,6 +28,7 @@ interface MCQ {
   optionC: string;
   optionD: string;
   correctOption: number;
+  quizId: number; // Ensure quizId is part of the MCQ interface
 }
 
 export default function QuizPage() {
@@ -39,10 +40,12 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const { user } = useUser();
   const [isPerformanceSubmitted, setIsPerformanceSubmitted] = useState(false);
+  const [quizId, setQuizId] = useState<number | null>(null); // Add quizId to state
 
   useEffect(() => {
     async function fetchQuizData() {
       try {
+        // Fetch the resource data
         const { data: resourceData, error: resourceError } = await supabaseClient
           .from("Resource")
           .select("*")
@@ -51,10 +54,23 @@ export default function QuizPage() {
 
         if (resourceError) throw resourceError;
 
+        // Fetch the quizId from the Quiz table using the resourceId
+        const { data: quizData, error: quizError } = await supabaseClient
+          .from("Quiz")
+          .select("id")
+          .eq("resourceId", params.id)
+          .single();
+
+        if (quizError) throw quizError;
+
+        const quizId = quizData.id;
+        setQuizId(quizId); // Store quizId in state
+
+        // Fetch MCQs using the quizId
         const { data: mcqData, error: mcqError } = await supabaseClient
           .from("MCQ")
           .select("*")
-          .eq("quizId", params.id);
+          .eq("quizId", quizId);
 
         if (mcqError) throw mcqError;
 
@@ -64,7 +80,7 @@ export default function QuizPage() {
         console.error("Error fetching quiz data:", error);
         toast({
           title: "Error",
-          description: "Failed to load quiz",
+          description: "Failed to load quiz. Please try again later.",
           variant: "destructive",
         });
       } finally {
@@ -87,6 +103,15 @@ export default function QuizPage() {
         return;
       }
 
+      if (!quizId) {
+        toast({
+          title: "Error",
+          description: "Quiz ID not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Calculate correctCount on the fly
       const totalCorrect = mcqs.reduce((acc, mcq) => {
         if (answers[mcq.id] === mcq.correctOption.toString()) {
@@ -96,7 +121,7 @@ export default function QuizPage() {
       }, 0);
 
       const performanceData = {
-        quizId: parseInt(params.id as string),
+        quizId: quizId, // Use quizId from state
         correctAnswers: totalCorrect,
         totalQuestions: mcqs.length,
         userId: userId,

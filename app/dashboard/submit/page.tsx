@@ -11,7 +11,7 @@ import { extractYouTubeTranscription, scrapeArticleContent } from "@/lib/utils";
 import { generateMCQs } from "@/lib/ai";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from 'next/navigation'; // Step 1: Import useRouter
+import { useRouter } from 'next/navigation';
 
 export const maxDuration = 60;
 
@@ -23,7 +23,7 @@ export default function SubmitNewURL() {
   const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const { toast } = useToast();
-  const router = useRouter(); // Step 2: Obtain router instance
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -53,6 +53,7 @@ export default function SubmitNewURL() {
         description: "Extracting content from URL...",
       });
 
+      // Step 1: Extract content from the URL
       const extractResponse = await fetch('/api/extract', {
         method: 'POST',
         headers: {
@@ -71,16 +72,10 @@ export default function SubmitNewURL() {
       console.log("Image URL:", imageUrl);
       console.log("Title:", title);
 
-      toast({
-        title: "Generating Questions",
-        description: "Using AI to create MCQs...",
-      });
-
-      const mcqs = await generateMCQs(content);
-
+      // Step 2: Determine the type of content (YouTube or Article)
       const type = url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "article";
 
-      // Save to database with title
+      // Step 3: Save the resource to the database
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([{
@@ -99,9 +94,18 @@ export default function SubmitNewURL() {
         throw resourceError;
       }
 
-      console.log("Resource ID:", resource.id); // Verify resource.id is available
+      console.log("Resource ID:", resource.id);
 
-      const { error: quizError } = await supabaseClient
+      // Step 4: Generate MCQs
+      toast({
+        title: "Generating Questions",
+        description: "Using AI to create MCQs...",
+      });
+
+      const mcqs = await generateMCQs(content);
+
+      // Step 5: Create a quiz entry in the database
+      const { error: quizError, data: quizData } = await supabaseClient
         .from("Quiz")
         .insert([{
           resourceId: resource.id,
@@ -110,11 +114,17 @@ export default function SubmitNewURL() {
         .select("id")
         .single();
 
-      if (quizError) throw quizError;
+      if (quizError) {
+        console.error("Quiz Error:", quizError);
+        throw quizError;
+      }
 
-      // Transform MCQs to match database schema
+      const quizId = quizData.id;
+      console.log("Quiz ID:", quizId);
+
+      // Step 6: Transform MCQs to match database schema and insert them
       const mcqData = mcqs.map((mcq) => ({
-        quizId: resource.id,
+        quizId: quizId,
         question: mcq.question,
         optionA: mcq.options[0],
         optionB: mcq.options[1],
@@ -135,8 +145,8 @@ export default function SubmitNewURL() {
         description: "Resource and questions have been saved.",
       });
 
-      // Step 3: Redirect after successful submission
-      router.push(`/dashboard/quiz/${resource.id}`); // Redirect to the resource page
+      // Step 7: Redirect after successful submission
+      router.push(`/dashboard/quiz/${resource.id}`);
 
     } catch (error) {
       console.error("Error in onSubmit:", error);

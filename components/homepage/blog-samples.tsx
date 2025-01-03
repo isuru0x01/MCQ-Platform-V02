@@ -69,7 +69,7 @@ export default function BlogSample() {
       <div className="flex flex-col items-start">
         <div className="grid gap-5 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 mt-5">
           {quizzes.map((quiz) => (
-            <Link href={`/quiz/${quiz.id}`} key={quiz.id}>
+            <Link href={`/dashboard/quiz/${quiz.id}`} key={quiz.id}>
               <article className="flex flex-col space-y-2 p-4 rounded-md border dark:bg-black w-full h-full"> {/* Ensure full height */}
                 <div className="relative w-full h-48"> {/* Fixed height for images */}
                   <Image

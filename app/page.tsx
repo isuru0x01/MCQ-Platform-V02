@@ -10,16 +10,17 @@ import config from "@/config";
 export default function Home() {
   return (
     <PageWrapper>
-      <div className="flex flex-col justify-center items-center w-full mt-[1rem] p-3">
+      <div className="flex flex-col justify-center items-center w-full mt-[1rem] py-1 p-3">
         <HeroSection />
       </div>
-      <div className="flex my-[8rem] w-full justify-center items-center">
+      {/* Reduce top margin only */}
+      <div className="flex mt-[4rem] mb-0 w-full justify-center items-center py-0 pb-0">
         <SideBySide />
       </div>
       {/* <div className="flex flex-col p-2 w-full justify-center items-center">
         <MarketingCards />
       </div> */}
-      <div className="max-w-[1200px] p-8 mt-[2rem] lg:mt-[6rem] lg:mb-[5rem]">
+      <div className="max-w-[1200px] p-8 mt-[1rem] lg:mt-[2rem] lg:mb-[5rem]">
         <BlogSample />
       </div>
       {(config.auth.enabled && config.payments.enabled) && <div>

@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export function OrbitingCirclesComponent() {
   return (
-    <div className="relative flex h-[500px] w-full max-w-[32rem] items-center justify-center overflow-hidden rounded-lg">
+    <div className="relative flex h-[500px] w-full max-w-[32rem] items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900">
       <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-500/80 bg-clip-text text-center text-7xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
         Learn Smarter
       </span>
@@ -16,7 +16,7 @@ export function OrbitingCirclesComponent() {
         delay={20}
         radius={80}
       >
-        <Icons.brain />
+        <Icons.brain className="text-blue-500 hover:text-blue-700" />
       </OrbitingCircles>
       <OrbitingCircles
         className="h-[30px] w-[30px] border-none bg-transparent"
@@ -24,7 +24,7 @@ export function OrbitingCirclesComponent() {
         delay={10}
         radius={80}
       >
-        <Icons.book />
+        <Icons.book className="text-green-500 hover:text-green-700" />
       </OrbitingCircles>
 
       {/* Outer Circles (reverse) */}
@@ -34,7 +34,7 @@ export function OrbitingCirclesComponent() {
         radius={190}
         duration={20}
       >
-        <Icons.youtube />
+        <Icons.youtube className="text-red-500 hover:text-red-700" />
       </OrbitingCircles>
       <OrbitingCircles
         className="h-[50px] w-[50px] border-none bg-transparent"
@@ -43,7 +43,7 @@ export function OrbitingCirclesComponent() {
         duration={20}
         delay={20}
       >
-        <Icons.ai />
+        <Icons.ai className="text-purple-500 hover:text-purple-700" />
       </OrbitingCircles>
     </div>
   );
@@ -125,6 +125,4 @@ const Icons = {
       <path d="M9 12h6M12 9v6" />
     </svg>
   ),
-
-  
 };

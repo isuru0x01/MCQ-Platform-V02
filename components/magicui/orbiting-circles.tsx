@@ -1,4 +1,7 @@
+"use client"
+
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 export default function OrbitingCircles({
   className,
@@ -17,6 +20,8 @@ export default function OrbitingCircles({
   radius?: number;
   path?: boolean;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <>
       {path && (
@@ -46,12 +51,16 @@ export default function OrbitingCircles({
         }
         className={cn(
           `absolute flex h-full w-full transform-gpu animate-orbit items-center justify-center rounded-full border
-           [animation-delay:calc(var(--delay)*1000ms)] `,
+           [animation-delay:calc(var(--delay)*1000ms)] transition-all duration-300 ease-in-out hover:scale-110 hover:shadow-lg`,
           { "[animation-direction:reverse]": reverse },
           className,
         )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        {children}
+        <div className={cn("transition-transform duration-300 ease-in-out", { "scale-125": isHovered })}>
+          {children}
+        </div>
       </div>
     </>
   );

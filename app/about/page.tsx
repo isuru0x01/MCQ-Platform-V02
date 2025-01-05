@@ -57,7 +57,7 @@ export default async function AboutPage() {
             <section className="mb-8">
               <h2 className="mt-10 scroll-m-20 border-b pb-2 mb-3 text-3xl font-semibold tracking-tight transition-colors first:mt-0">How It Works</h2>
               <p className="text-md mb-5 leading-relaxed">
-                MCQ Labs uses advanced AI models to analyze educational content and generate multiple-choice questions (MCQs). Whether you're reading an article or watching a YouTube lecture, our platform helps you test your understanding and retain knowledge better.
+                MCQ Labs uses advanced AI models to analyze educational content and generate multiple-choice questions. Whether you're reading an article or watching a YouTube lecture, our platform helps you test your understanding and retain knowledge better.
               </p>
               <ol className="flex flex-col gap-1 list-decimal ml-8 mb-4">
                 <li className="mb-2">

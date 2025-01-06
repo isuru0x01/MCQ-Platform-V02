@@ -35,7 +35,7 @@ export default function ContactPage() {
           <div className="text-center">
             <p className="text-lg font-semibold">Email:</p>
             <a href="mailto:info@mcqlabs.click" className="text-blue-500 hover:text-blue-700">
-              support@mcqlabs.xyz
+              support@mcqlabs.click
             </a>
           </div>
 

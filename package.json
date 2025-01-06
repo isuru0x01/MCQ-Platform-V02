@@ -63,6 +63,7 @@
     "openai": "^4.77.0",
     "prisma": "^5.9.1",
     "protobufjs": "^7.4.0",
+    "qrcode.react": "^4.2.0",
     "react": "latest",
     "react-day-picker": "^8.10.1",
     "react-dom": "latest",

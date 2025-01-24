@@ -44,7 +44,7 @@ export default function DonationPage() {
                                 <div className="p-4 bg-white dark:bg-gray-800 rounded-lg">
                                     <QRCodeCanvas
                                         value={walletAddress}
-                                        size={200}
+                                        size={100}
                                         bgColor="transparent"
                                         fgColor="currentColor"
                                         className="text-black dark:text-white"

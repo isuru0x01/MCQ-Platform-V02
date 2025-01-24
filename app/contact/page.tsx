@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import PageWrapper from "@/components/wrapper/page-wrapper";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mcqlabs.click"),
+  metadataBase: new URL("https://mcqlab.click"),
   keywords: ['MCQ Labs', 'contact', 'support', 'educational quizzes'],
   title: 'Contact MCQ Labs',
   openGraph: {
@@ -34,8 +34,8 @@ export default function ContactPage() {
         <div className="mt-[1.5rem] w-full max-w-[600px] bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md">
           <div className="text-center">
             <p className="text-lg font-semibold">Email:</p>
-            <a href="mailto:info@mcqlabs.click" className="text-blue-500 hover:text-blue-700">
-              support@mcqlabs.click
+            <a href="mailto:info@mcqlab.click" className="text-blue-500 hover:text-blue-700">
+            info@mcqlab.click
             </a>
           </div>
 

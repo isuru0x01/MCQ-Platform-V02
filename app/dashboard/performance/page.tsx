@@ -36,7 +36,11 @@ type Performance = {
   createdAt: string;
   quizId: number;
   userId: string;
-  Quiz: Quiz | null;
+  Quiz: {
+    id: number;
+    resourceId: number;
+    Resource: Resource;
+  } | null;
   title: string | null;
 };
 
@@ -74,9 +78,7 @@ export default function PerformancePage() {
             userId,
             Quiz (
               id,
-              createdAt,
               resourceId,
-              userId,
               Resource (
                 id,
                 title,
@@ -95,17 +97,10 @@ export default function PerformancePage() {
   
       if (error) throw error;
   
-      console.log("Performance Data:", data); // Debugging: Verify structure
-  
-      const performanceWithTitle = data.map((performance) => {
-        // Directly access Resource title since it's an object
-        const resourceTitle = performance.Quiz?.Resource?.title || "N/A";
-  
-        return {
-          ...performance,
-          title: resourceTitle,
-        };
-      });
+      const performanceWithTitle = data.map((performance) => ({
+        ...performance,
+        title: performance.Quiz?.Resource?.title || "N/A",
+      }));
   
       setPerformanceData(performanceWithTitle);
     } catch (error) {
@@ -208,7 +203,7 @@ export default function PerformancePage() {
                   %
                 </td>
                 <td className="p-2 border">
-                  <Link href={`/dashboard/quiz/${performance.quizId}`}>
+                  <Link href={`/dashboard/quiz/${performance.Quiz?.resourceId}`}>
                     <Button>Retake</Button>
                   </Link>
                   <Button

@@ -62,10 +62,33 @@ export async function generateMCQs(content: string): Promise<any[]> {
       ]
 
       Requirements:
-      1. Return ONLY the JSON array, no other text
+      1. Return ONLY the JSON array without additional text
       2. Each question must have exactly 4 options
       3. The correct_answer must be included in the options array
-      4. Generate exactly 20 questions`;
+      4. Generate exactly 20 questions
+      5. Stem Construction:
+        - Use identical terminology from content
+        - Avoid all negative wording (no "not", "except", "never")
+        - Express complete problem - student could theoretically answer without options
+        - Eliminate irrelevant information and redundancy
+        - Avoid verbal association clues (don't repeat stem phrases in correct answer)
+      6. Distractor Quality:
+        - All distractors must be plausible and domain-appropriate
+        - Match correct answer's language style and length
+        - For conceptual questions, use common student misconceptions
+        - Ensure only ONE unambiguous correct answer
+        - Make options mutually exclusive
+      7. Formatting Standards:
+        - Options in logical order (numerical/chronological/conceptual)
+        - Maintain grammatical consistency between stem and options
+        - Avoid absolute terms (all/none/always/never)
+        - Prohibited options: "all/none of the above"
+        - No trick questions or unimportant detail emphasis
+      8. Validation:
+        - Test that knowledgeable students would consistently select correct answer
+        - Ensure no answer patterns emerge (e.g., correct answers equally distributed)
+        - Verify consistent terminology with source content`;
+
 
   try {
     // Attempt to generate MCQs using OpenAI
@@ -184,15 +207,22 @@ export async function generateMCQs(content: string): Promise<any[]> {
  * @returns {Promise<string>} - The generated markdown summary
  */
 export async function generateTutorial(content: string): Promise<string> {
-  const prompt = `Generate a comprehensive tutorial of the following content. 
+  const prompt = `Generate an engaging and comprehensive tutorial based on the following content. 
+
   The tutorial should:
-  1. Be in markdown format
-  2. Include key points and main ideas
-  3. Be well-structured with headers and bullet points where appropriate
-  4. Be between 200-1000 words
-  5. Use domain-specific knowledge to make the content understandable to reader's with little knowledge on the subject
-  
+  1. Be written in **Markdown format** with a clear structure.
+  2. Start with a brief introduction that explains the importance of the topic and what the learner will achieve by the end of the tutorial.
+  3. Break down the content into **well-organized sections**, using headers, subheaders, and bullet points where needed for clarity.
+  4. Include **interactive elements** such as reflective questions, small exercises, or challenges to engage the learner actively.
+  5. Provide **clear instructions** to make the tutorial as self-guided as possible, so students can progress independently.
+  6. Use **examples and analogies** to simplify complex concepts and help readers connect the material to real-world applications.
+  7. Highlight **key points, definitions, or formulas** in bold or in callout blocks for emphasis.
+  8. Incorporate **additional explanations** where necessary to ensure that readers with little prior knowledge can understand the underlying concept.
+  9. End with a **summary** of the main ideas and suggestions for further exploration or practice.
+  10. Keep the length between **200-1000 words**, ensuring it is concise yet comprehensive.
+
   Content to use for the tutorial: ${content}`;
+
 
   try {
     // Try with OpenAI first
@@ -204,7 +234,7 @@ export async function generateTutorial(content: string): Promise<string> {
       model: model,
       messages: [{ role: 'user', content: prompt.replace("${content}", truncatedContent) }],
       temperature: 0.7,
-      max_tokens: 5000,
+      max_completion_tokens: 5000,
     });
 
     const response = completion.choices[0]?.message?.content;

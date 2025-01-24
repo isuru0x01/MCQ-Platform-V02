@@ -41,9 +41,6 @@ export default async function AboutPage() {
             <Button size="lg" variant="outline">Contact Us</Button>
           </Link>
         </div>
-        <div className='mb-3 mt-[1.5rem] max-w-[900px] w-full'>
-          <VideoPlayer videoSrc="https://utfs.io/f/08b0a37f-afd7-4623-b5cc-e85184528fce-1f02.mp4" />
-        </div>
         <div className='flex flex-col min-h-screen max-w-[900px] items-center mb-[2rem]'>
           <article className="w-full mx-auto pb-8">
             <h1 className="text-3xl lg:text-4xl font-bold mb-6">Our Mission</h1>

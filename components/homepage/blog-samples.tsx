@@ -29,7 +29,7 @@ export default function BlogSample() {
             )
           `)
           .order('createdAt', { ascending: false }) // Sort by most recent
-          .limit(3); // Fetch the 3 most recent quizzes
+          .limit(10); // Fetch the 3 most recent quizzes
 
         if (error) {
           throw new Error(error.message);

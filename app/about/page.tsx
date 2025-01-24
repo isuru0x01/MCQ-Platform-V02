@@ -7,7 +7,7 @@ import { VideoPlayer } from '@/components/video-player';
 export const metadata: Metadata = {
   metadataBase: new URL("https://mcqlabs.click"),
   keywords: ['MCQ Labs', 'educational quizzes', 'AI-generated quizzes', 'learning platform'],
-  title: 'About MCQ Labs',
+  title: ' MCQ Labs',
   openGraph: {
     description: 'Learn more about MCQ Labs, the AI-powered platform for generating educational quizzes from articles and YouTube videos.',
     images: ['https://mcqlabs.click/images/about-banner.jpg']

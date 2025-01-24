@@ -14,9 +14,9 @@ export default function Home() {
         <HeroSection />
       </div>
       {/* Reduce top margin only */}
-      <div className="flex mt-[4rem] mb-0 w-full justify-center items-center py-0 pb-0">
+      {/* <div className="flex mt-[4rem] mb-0 w-full justify-center items-center py-0 pb-0">
         <SideBySide />
-      </div>
+      </div> */}
       {/* <div className="flex flex-col p-2 w-full justify-center items-center">
         <MarketingCards />
       </div> */}

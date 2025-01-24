@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@clerk/nextjs";
+import ReactMarkdown from 'react-markdown';
 
 interface Resource {
   id: number;
@@ -18,6 +19,7 @@ interface Resource {
   type: "youtube" | "article";
   content: string;
   image_url: string | null;
+  tutorial: string;
 }
 
 interface MCQ {
@@ -199,7 +201,7 @@ export default function QuizPage() {
 
   return (
     <div className="flex flex-col md:flex-row gap-6 p-6">
-      <div className="w-full md:w-1/2">
+      <div className="w-full md:w-1/2 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>{resource.title}</CardTitle>
@@ -221,6 +223,47 @@ export default function QuizPage() {
             )}
           </CardContent>
         </Card>
+
+        {resource.tutorial && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Tutorial</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none dark:prose-invert">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => <h1 className="text-2xl font-bold mb-4">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-bold mb-3">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-bold mb-2">{children}</h3>,
+                    p: ({ children }) => <p className="mb-4">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc pl-6 mb-4">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-6 mb-4">{children}</ol>,
+                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                    code: ({ children }) => (
+                      <code className="bg-muted px-1.5 py-0.5 rounded-md text-sm">{children}</code>
+                    ),
+                    pre: ({ children }) => (
+                      <pre className="bg-muted p-4 rounded-lg overflow-x-auto mb-4">{children}</pre>
+                    ),
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-primary pl-4 italic mb-4">
+                        {children}
+                      </blockquote>
+                    ),
+                    a: ({ href, children }) => (
+                      <a href={href} className="text-primary hover:underline">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {resource.tutorial}
+                </ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="w-full md:w-1/2">

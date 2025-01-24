@@ -8,7 +8,7 @@ import { z } from "zod";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { useState } from "react";
 import { extractYouTubeTranscription, scrapeArticleContent } from "@/lib/utils";
-import { generateMCQs } from "@/lib/ai";
+import { generateMCQs, generateTutorial } from "@/lib/ai";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from 'next/navigation';
@@ -139,10 +139,29 @@ export default function SubmitNewURL() {
 
       if (mcqError) throw mcqError;
 
+      // New Step: Generate and store tutorial
+      toast({
+        title: "Generating Tutorial",
+        description: "Creating a comprehensive tutorial...",
+      });
+
+      const tutorial = await generateTutorial(content);
+
+      // Update the resource with the tutorial
+      const { error: tutorialError } = await supabaseClient
+        .from("Resource")
+        .update({ tutorial: tutorial })
+        .eq('id', resource.id);
+
+      if (tutorialError) {
+        console.error("Tutorial Error:", tutorialError);
+        throw tutorialError;
+      }
+
       form.reset();
       toast({
         title: "Success!",
-        description: "Resource and questions have been saved.",
+        description: "Resource, questions, and tutorial have been saved.",
       });
 
       // Step 7: Redirect after successful submission

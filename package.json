@@ -69,6 +69,7 @@
     "react-dom": "latest",
     "react-hook-form": "^7.51.3",
     "react-icons": "^4.11.0",
+    "react-markdown": "^9.0.3",
     "recharts": "^2.12.7",
     "sharp": "^0.33.4",
     "sonner": "^1.4.41",
@@ -83,6 +84,7 @@
     "zod": "^3.23.5"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",

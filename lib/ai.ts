@@ -177,3 +177,102 @@ export async function generateMCQs(content: string): Promise<any[]> {
     }
   }
 }
+
+/**
+ * Generate a markdown summary of the content using AI
+ * @param {string} content - The input content to summarize
+ * @returns {Promise<string>} - The generated markdown summary
+ */
+export async function generateTutorial(content: string): Promise<string> {
+  const prompt = `Generate a comprehensive tutorial of the following content. 
+  The tutorial should:
+  1. Be in markdown format
+  2. Include key points and main ideas
+  3. Be well-structured with headers and bullet points where appropriate
+  4. Be between 200-1000 words
+  5. Use domain-specific knowledge to make the content understandable to reader's with little knowledge on the subject
+  
+  Content to use for the tutorial: ${content}`;
+
+  try {
+    // Try with OpenAI first
+    const model = "o1-mini";
+    const tokenLimit = getTokenLimit(model);
+    const truncatedContent = truncateText(content, tokenLimit);
+
+    const completion = await client.chat.completions.create({
+      model: model,
+      messages: [{ role: 'user', content: prompt.replace("${content}", truncatedContent) }],
+      temperature: 0.7,
+      max_tokens: 5000,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) throw new Error('No response from OpenAI');
+
+    return response;
+
+  } catch (error) {
+    console.error("OpenAI Error:", error);
+    console.log("Falling back to Together AI...");
+
+    try {
+      // Fallback to Together AI
+      const model = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+      const tokenLimit = getTokenLimit(model);
+      const truncatedContent = truncateText(content, tokenLimit);
+
+      const response = await together.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are a skilled tutorial writer. Generate a tutorial in markdown format." },
+          { role: "user", content: prompt.replace("${content}", truncatedContent) }
+        ],
+        model: model,
+        max_tokens: 1000,
+        temperature: 0.7,
+        top_p: 0.7,
+        top_k: 50,
+        repetition_penalty: 1,
+      });
+
+      const summary = response.choices[0]?.message?.content;
+      if (!summary) throw new Error('No response from Together AI');
+
+      return summary;
+
+    } catch (togetherError) {
+      console.error("Together AI Error:", togetherError);
+      console.log("Falling back to Groq...");
+
+      try {
+        // Fallback to Groq
+        const model = "llama-3.3-70b-versatile";
+        const tokenLimit = getTokenLimit(model);
+        const truncatedContent = truncateText(content, tokenLimit);
+
+        const groqResponse = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "user",
+              content: prompt.replace("${content}", truncatedContent),
+            },
+          ],
+          model: model,
+          temperature: 0.7,
+          max_tokens: 5000,
+          top_p: 1,
+          stream: false,
+        });
+
+        const summary = groqResponse.choices[0]?.message?.content;
+        if (!summary) throw new Error('No response from Groq');
+
+        return summary;
+
+      } catch (groqError) {
+        console.error("Groq Error:", groqError);
+        throw new Error("All AI models failed to generate summary.");
+      }
+    }
+  }
+}

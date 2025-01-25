@@ -623,7 +623,7 @@ export default function SubmitNewURL() {
                       <li>Private or unlisted videos are not supported</li>
                       <li>Recently uploaded videos may not be available to import</li>
                       <li>Short-form videos (YouTube Shorts) are not supported</li>
-                      <li>Sometimes YouTube upload fails due to YouTube's API limitations.</li>
+                      <li>Sometimes YouTube upload fails due to YouTube&apos;'s API limitations.</li>
                       <li>If the YouTUbe upload fails constantly, please email us at <a href="mailto:support@mcqlab.ai" className="text-blue-500">info@mcqlab.click</a>.</li>
                     </ul>
                   </div>

@@ -4,6 +4,7 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -53,3 +54,4 @@ export async function scrapeArticleContent(url: string): Promise<string> {
     throw new Error('Failed to scrape article content');
   }
 }
+

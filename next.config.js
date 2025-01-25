@@ -16,6 +16,10 @@ const nextConfig = {
       },
     ],
   },
+  serverExternalPackages: ["pdf-parse"],
+  experimental: {
+    serverActions: true,
+  },
 }
 
 module.exports = nextConfig 

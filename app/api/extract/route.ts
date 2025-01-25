@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     let title: string;
 
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      // Existing YouTube extraction logic
       const videoId = url.match(
         /(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/
       )?.[1];
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
         );
       }
     } else {
+      // Existing article extraction logic
       const response = await axios.get(url);
       const $ = cheerioLoad(response.data);
 
@@ -85,6 +87,7 @@ export async function POST(req: Request) {
       imageUrl,
       title,
     });
+
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json(
@@ -93,3 +96,9 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};

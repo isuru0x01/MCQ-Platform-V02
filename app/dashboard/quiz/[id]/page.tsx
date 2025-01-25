@@ -11,15 +11,18 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@clerk/nextjs";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { clerkClient } from '@/lib/clerk';
 
 interface Resource {
   id: number;
   title: string;
   url: string;
-  type: "youtube" | "article";
+  type: "youtube" | "article" | "document";
   content: string;
   image_url: string | null;
   tutorial: string;
+  userId: string;
 }
 
 interface MCQ {
@@ -43,6 +46,24 @@ export default function QuizPage() {
   const { user } = useUser();
   const [isPerformanceSubmitted, setIsPerformanceSubmitted] = useState(false);
   const [quizId, setQuizId] = useState<number | null>(null); // Add quizId to state
+  const [uploaderName, setUploaderName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUploaderName = async () => {
+      if (resource?.type === 'document' && resource.userId) {
+        try {
+          const response = await clerkClient.users.getUser(resource.userId);
+          const name = [response.firstName, response.lastName].filter(Boolean).join(' ');
+          setUploaderName(name || 'the user');
+        } catch (error) {
+          console.error('Error fetching uploader:', error);
+          setUploaderName('the user');
+        }
+      }
+    };
+  
+    fetchUploaderName();
+  }, [resource]);
 
   useEffect(() => {
     async function fetchQuizData() {
@@ -213,14 +234,25 @@ export default function QuizPage() {
                   src={getYouTubeEmbedUrl(resource.url)}
                   className="absolute top-0 left-0 w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
+                  
                 />
               </div>
-            ) : (
+            ) : resource.type === "document" ? (
+              // Show upload message only for documents
+              <div className="prose max-w-none dark:prose-invert">
+                <p>
+                  The file is uploaded by{" "}
+                  <span className="font-medium">
+                    {uploaderName || "..."}
+                  </span>
+                </p>
+              </div>
+            ) : !["article", "document"].includes(resource.type) ? (
+              // Show content only for non-article, non-document types
               <div className="prose max-w-none dark:prose-invert">
                 {resource.content}
               </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
@@ -232,6 +264,7 @@ export default function QuizPage() {
             <CardContent>
               <div className="prose max-w-none dark:prose-invert">
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     h1: ({ children }) => <h1 className="text-2xl font-bold mb-4">{children}</h1>,
                     h2: ({ children }) => <h2 className="text-xl font-bold mb-3">{children}</h2>,
@@ -258,7 +291,9 @@ export default function QuizPage() {
                     ),
                   }}
                 >
-                  {resource.tutorial}
+                  {resource.tutorial
+                  .replace(/^```(markdown)?\s*/, '') // Remove starting ```markdown or ```
+                  .replace(/\s*```$/, '')}
                 </ReactMarkdown>
               </div>
             </CardContent>

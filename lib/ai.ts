@@ -99,15 +99,16 @@ export async function generateMCQs(content: string): Promise<any[]> {
     const completion = await client.chat.completions.create({
       model: model,
       messages: [{ role: 'user', content: prompt.replace("${content}", truncatedContent) }],
-      temperature: 0.8,
-      max_tokens: tokenLimit,
+      max_completion_tokens: tokenLimit,
     });
 
     // Parse the response
     const response = completion.choices[0]?.message?.content;
     if (!response) throw new Error('No response from OpenAI');
 
-    return JSON.parse(response);
+    const cleanedResponse = response.replace(/```json|```/g, '').trim();
+
+    return JSON.parse(cleanedResponse);
 
   } catch (error) {
     console.error("OpenAI Error:", error);
@@ -233,14 +234,15 @@ export async function generateTutorial(content: string): Promise<string> {
     const completion = await client.chat.completions.create({
       model: model,
       messages: [{ role: 'user', content: prompt.replace("${content}", truncatedContent) }],
-      temperature: 0.7,
       max_completion_tokens: 5000,
     });
 
     const response = completion.choices[0]?.message?.content;
     if (!response) throw new Error('No response from OpenAI');
 
-    return response;
+    const cleanedResponse = response.replace(/```json|```/g, '').trim();
+
+    return cleanedResponse;
 
   } catch (error) {
     console.error("OpenAI Error:", error);
@@ -258,7 +260,7 @@ export async function generateTutorial(content: string): Promise<string> {
           { role: "user", content: prompt.replace("${content}", truncatedContent) }
         ],
         model: model,
-        max_tokens: 1000,
+        max_tokens: 5000,
         temperature: 0.7,
         top_p: 0.7,
         top_k: 50,
@@ -303,6 +305,70 @@ export async function generateTutorial(content: string): Promise<string> {
         console.error("Groq Error:", groqError);
         throw new Error("All AI models failed to generate summary.");
       }
+    }
+  }
+}
+
+/**
+ * Generate a title from content using AI
+ * @param {string} content - The content to generate a title from
+ * @returns {Promise<string>} - The generated title
+ */
+export async function generateTitle(content: string): Promise<string> {
+  const prompt = `You are a title extractor. Try to extract the title from the content. If you can't extract the title, generate a title based on the content. The title should be concise, descriptive, and representative of the main topic. The title should not contain double quotes.
+  
+  Content: ${content.slice(0, 2000)}...`; // Use first 2000 chars for context
+
+  try {
+    // Try with OpenAI first
+    const model = "o1-mini";
+    const tokenLimit = getTokenLimit(model);
+    const truncatedContent = truncateText(content, tokenLimit);
+
+    const completion = await client.chat.completions.create({
+      model: model,
+      messages: [{ role: 'user', content: prompt.replace("${content}", truncatedContent) }],
+      max_completion_tokens: 500, // Short response for title
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) throw new Error('No response from OpenAI');
+
+    const cleanedResponse = response.replace(/```json|```/g, '').trim();
+
+    return cleanedResponse.trim();
+
+  } catch (error) {
+    console.error("OpenAI Error:", error);
+    console.log("Falling back to Together AI...");
+
+    try {
+      // Fallback to Together AI
+      const model = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+      const tokenLimit = getTokenLimit(model);
+      const truncatedContent = truncateText(content, tokenLimit);
+
+      const response = await together.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are a title extractor. Try to extract the title from the content. If you can't extract the title, generate a title based on the content. The title should be concise, descriptive, and representative of the main topic. The title should not contain double quotes." },
+          { role: "user", content: prompt.replace("${content}", truncatedContent) }
+        ],
+        model: model,
+        max_tokens: 50,
+        temperature: 0.7,
+        top_p: 0.7,
+        top_k: 50,
+        repetition_penalty: 1,
+      });
+
+      const title = response.choices[0]?.message?.content;
+      if (!title) throw new Error('No response from Together AI');
+
+      return title.trim();
+
+    } catch (togetherError) {
+      console.error("Together AI Error:", togetherError);
+      return "The title is not available"; // Fallback to file name if all AI services fail
     }
   }
 }

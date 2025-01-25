@@ -192,9 +192,7 @@ export default function ProjectsPage() {
                   <p className="text-muted-foreground">No image available</p>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {resource.content}
-              </p>
+            
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline" asChild>

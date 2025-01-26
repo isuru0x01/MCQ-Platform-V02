@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@clerk/nextjs";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { clerkClient } from '@/lib/clerk';
+import { getClerkClient } from '@/lib/clerk';
 
 interface Resource {
   id: number;
@@ -52,7 +52,8 @@ export default function QuizPage() {
     const fetchUploaderName = async () => {
       if (resource?.type === 'document' && resource.userId) {
         try {
-          const response = await clerkClient.users.getUser(resource.userId);
+          const clerk = await getClerkClient();
+          const response = await clerk.users.getUser(resource.userId);
           const name = [response.firstName, response.lastName].filter(Boolean).join(' ');
           setUploaderName(name || 'the user');
         } catch (error) {

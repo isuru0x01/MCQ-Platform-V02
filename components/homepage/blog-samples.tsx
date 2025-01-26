@@ -73,7 +73,12 @@ export default function BlogSample() {
               <article className="flex flex-col space-y-2 p-4 rounded-md border dark:bg-black w-full h-full"> {/* Ensure full height */}
                 <div className="relative w-full h-48"> {/* Fixed height for images */}
                   <Image
-                    src={quiz.Resource.image_url || (quiz.Resource.type === 'youtube' ? '/images/youtube-icon.svg' : '/images/article-icon.svg')} // Use image_url or fallback to icons
+                    src={quiz.Resource.image_url // Use the provided image_url if available
+                      ? quiz.Resource.image_url 
+                      : quiz.Resource.type === 'youtube' 
+                        ? '/images/youtube-icon.svg' // Fallback for YouTube quizzes
+                        : '/images/default-placeholder.svg' // General fallback for all other quizzes
+                        } // Use image_url or fallback to icons
                     alt={quiz.Resource.title || (quiz.Resource.type === 'youtube' ? 'YouTube Video Quiz' : 'Article Quiz')}
                     fill // Fill the container
                     className="rounded-md border bg-muted transition-colors object-cover" // Ensure the image covers the area

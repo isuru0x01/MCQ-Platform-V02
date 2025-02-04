@@ -442,7 +442,7 @@ export default function SubmitNewURL() {
 
       if (tutorialError) throw tutorialError;
 
-      form.reset();
+      textForm.reset();
       toast({
         title: "Success!",
         description: "Text processed successfully.",

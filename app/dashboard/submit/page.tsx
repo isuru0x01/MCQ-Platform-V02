@@ -58,12 +58,20 @@ export default function SubmitNewURL() {
   const [isYoutubeDialogOpen, setIsYoutubeDialogOpen] = useState(false);
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
 
-  const form = useForm<z.infer<typeof FormSchema>>({
+  // Create separate form instances
+  const websiteForm = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: {
-      url: "",
-      text: "",
-    },
+    defaultValues: { url: "", text: "" },
+  });
+
+  const youtubeForm = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: { url: "", text: "" },
+  });
+
+  const textForm = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: { url: "", text: "" },
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -180,8 +188,31 @@ export default function SubmitNewURL() {
   };
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log("Submit started", data);
+    console.log("Submit started with data:", data); // Debug log
+    
     try {
+      if (!data.url) {
+        console.log("No URL provided"); // Debug log
+        toast({
+          title: "Error",
+          description: "Please enter a URL",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setLoading(true); // Set loading state immediately
+      console.log("Loading state set to true"); // Debug log
+
+      const { url } = data;
+      console.log("Processing URL:", url);
+
+      // Add debug toast
+      toast({
+        title: "Processing",
+        description: `Processing URL: ${url}`,
+      });
+
       if (!user) {
         toast({
           title: "Authentication Error",
@@ -190,10 +221,6 @@ export default function SubmitNewURL() {
         });
         return;
       }
-
-      setLoading(true);
-      const { url } = data;
-      console.log("Processing URL:", url);
 
       toast({
         title: "Processing",
@@ -305,13 +332,12 @@ export default function SubmitNewURL() {
         throw tutorialError;
       }
 
-      form.reset();
-      toast({
-        title: "Success!",
-        description: "Resource, questions, and tutorial have been saved.",
-      });
+      // Reset forms and close dialogs
+      websiteForm.reset();
+      youtubeForm.reset();
+      setIsWebsiteDialogOpen(false);
+      setIsYoutubeDialogOpen(false);
 
-      // Step 7: Redirect after successful submission
       router.push(`/dashboard/quiz/${resource.id}`);
 
     } catch (error) {
@@ -323,6 +349,7 @@ export default function SubmitNewURL() {
       });
     } finally {
       setLoading(false);
+      console.log("Loading state set to false"); // Debug log
     }
   }
 
@@ -542,10 +569,10 @@ export default function SubmitNewURL() {
             </DialogHeader>
             
             <div className="space-y-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <Form {...websiteForm}>
+                <form onSubmit={websiteForm.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
-                    control={form.control}
+                    control={websiteForm.control}
                     name="url"
                     render={({ field }) => (
                       <FormItem>
@@ -596,10 +623,52 @@ export default function SubmitNewURL() {
             </DialogHeader>
             
             <div className="space-y-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <Form {...youtubeForm}>
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    console.log("YouTube form submitted");
+                    
+                    const formData = youtubeForm.getValues();
+                    console.log("Form data:", formData);
+                    
+                    if (!formData.url) {
+                      toast({
+                        title: "Error",
+                        description: "Please enter a YouTube URL",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    // Validate YouTube URL
+                    if (!formData.url.includes('youtube.com') && !formData.url.includes('youtu.be')) {
+                      toast({
+                        title: "Error",
+                        description: "Please enter a valid YouTube URL",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    setLoading(true);
+                    try {
+                      await onSubmit(formData);
+                    } catch (error) {
+                      console.error("Error submitting YouTube URL:", error);
+                      toast({
+                        title: "Error",
+                        description: error instanceof Error ? error.message : "Failed to process YouTube video",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setLoading(false);
+                    }
+                  }} 
+                  className="space-y-4"
+                >
                   <FormField
-                    control={form.control}
+                    control={youtubeForm.control}
                     name="url"
                     render={({ field }) => (
                       <FormItem>
@@ -634,7 +703,7 @@ export default function SubmitNewURL() {
                       disabled={loading}
                       className="min-w-[100px]"
                     >
-                      {loading ? "Processing..." : "Insert"}
+                      {loading ? "Processing..." : "Import Video"}
                     </Button>
                   </div>
                 </form>
@@ -654,17 +723,17 @@ export default function SubmitNewURL() {
             </DialogHeader>
             
             <div className="space-y-6">
-              <Form {...form}>
+              <Form {...textForm}>
                 <form 
                   onSubmit={(e) => {
                     e.preventDefault();
                     console.log("Form submitted"); // Debug log
-                    form.handleSubmit(handleTextSubmit)(e);
+                    textForm.handleSubmit(handleTextSubmit)(e);
                   }} 
                   className="space-y-4"
                 >
                   <FormField
-                    control={form.control}
+                    control={textForm.control}
                     name="text"
                     render={({ field }) => (
                       <FormItem>

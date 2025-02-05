@@ -40,7 +40,7 @@ export default function NavBar() {
                     </SheetTrigger>
                     <SheetContent side="left">
                         <SheetHeader>
-                            <SheetTitle>MCQ Labs</SheetTitle>
+                            <SheetTitle>MCQ Lab</SheetTitle>
                         </SheetHeader>
                         <div className="flex flex-col space-y-3 mt-[1rem]">
                             <DialogClose asChild>
@@ -72,7 +72,7 @@ export default function NavBar() {
                 <NavigationMenuList className="max-[825px]:hidden flex gap-3 w-[100%] justify-between">
                     <Link href="/" className="pl-2 pr-2 flex items-center" aria-label="Home">
                         <BlocksIcon aria-hidden="true" />
-                        <span className="font-bold ml-2">MCQ Labs</span>
+                        <span className="font-bold ml-2">MCQ Lab</span>
                     </Link>
                 </NavigationMenuList>
                 <NavigationMenuList>

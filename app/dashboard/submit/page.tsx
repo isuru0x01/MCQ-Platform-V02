@@ -12,8 +12,8 @@ import { generateMCQs, generateTitle, generateTutorial } from "@/lib/ai";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from "@/components/ui/card";
-import { Upload, Link2, FileText, Youtube } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Upload, Link2, FileText, Youtube, Globe, ClipboardCopy } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import {
   Dialog,
@@ -463,100 +463,113 @@ export default function SubmitNewURL() {
   }
 
   return (
-    <main className="flex min-w-screen p-4 flex-col items-center justify-between">
-      <div className="flex flex-col w-full max-w-4xl">
-        <h1 className="text-3xl font-semibold tracking-tight mb-2">
-          Add Resource
+    <main className="container mx-auto p-6 max-w-5xl">
+      {/* Header Section */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">
+          Add Learning Resource
         </h1>
-        <p className="text-muted-foreground mb-8">
-          Add Resources to generate a personalised tutorial and multiple choice questions to evaluate your knowledge on specific topic.
-          (Examples: articles, course reading, course notes, research notes, lecture notes, YouTube videos, etc.)
+        <p className="text-muted-foreground text-lg">
+          Choose a method below to add content and generate personalized tutorials and quizzes.
         </p>
+      </div>
 
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Upload Section */}
-        <div 
-          {...getRootProps()} 
-          className={`border-2 border-dashed rounded-lg p-8 mb-8 transition-colors
-            ${isDragActive ? 'border-primary bg-primary/10' : 'border-border'}
-            hover:border-primary hover:bg-primary/5 cursor-pointer`}
-        >
-          <input {...getInputProps()} />
-          <div className="flex justify-center items-center mb-4">
-            <Upload className="h-12 w-12 text-blue-500" />
-          </div>
-          <h2 className="text-xl font-semibold text-center mb-2">Upload sources</h2>
-          <p className="text-center text-muted-foreground mb-4">
-            {isDragActive ? (
-              "Drop the file here..."
-            ) : (
-              <>
-                Drag and drop or <span className="text-blue-500">choose file</span> to upload
-              </>
-            )}
-          </p>
-          <p className="text-center text-sm text-muted-foreground">
-            Supported file types: PDF, .txt, Markdown, Word (.docx), PowerPoint (.pptx)
-          </p>
-          {selectedFile && (
-            <p className="text-center text-sm text-primary mt-2">
-              Selected file: {selectedFile.name}
-            </p>
-          )}
-        </div>
-
-        {/* Additional Methods - Now in a flex row */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center">
-          
-
-          {/* Link Section */}
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex-1 min-w-[200px]">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <Link2 className="h-6 w-6" />
-                <div>
-                  <h3 className="font-medium">Link</h3>
-                  <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setIsWebsiteDialogOpen(true)}
-                    >
-                      Website
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setIsYoutubeDialogOpen(true)}
-                    >
-                      YouTube
-                    </Button>
-                  </div>
+        <Card className="col-span-1 md:col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-blue-500" />
+              Upload Files
+            </CardTitle>
+            <CardDescription>
+              Drag and drop or select files to upload
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div 
+              {...getRootProps()} 
+              className={`border-2 border-dashed rounded-lg p-8 transition-colors
+                ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' : 'border-border'}
+                hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer`}
+            >
+              <input {...getInputProps()} />
+              <div className="flex flex-col items-center gap-4">
+                <Upload className={`h-12 w-12 ${isDragActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                <div className="text-center">
+                  <p className="text-sm font-medium mb-1">
+                    {isDragActive ? "Drop files here..." : "Drop files here or click to browse"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Supported: PDF, Word (.docx), PowerPoint (.pptx), Text (.txt), Markdown (.md)
+                  </p>
                 </div>
+                {selectedFile && (
+                  <p className="text-sm text-blue-500 font-medium mt-2">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Paste Text Section */}
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer flex-1 min-w-[200px]">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <FileText className="h-6 w-6" />
-                <div>
-                  <h3 className="font-medium">Paste text</h3>
-                  <div className="flex justify-start mt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setIsTextDialogOpen(true)}
-                    >
-                      Copied text
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Link Section */}
+        <Card className="col-span-1 md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-blue-500" />
+              Import from URL
+            </CardTitle>
+            <CardDescription>
+              Add content from websites or YouTube videos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={() => setIsWebsiteDialogOpen(true)}
+                variant="outline"
+                className="flex-1 h-24 flex flex-col items-center justify-center gap-2 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+              >
+                <Globe className="h-6 w-6 text-blue-500" />
+                <span className="font-medium">Website</span>
+              </Button>
+              <Button 
+                onClick={() => setIsYoutubeDialogOpen(true)}
+                variant="outline"
+                className="flex-1 h-24 flex flex-col items-center justify-center gap-2 hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+              >
+                <Youtube className="h-6 w-6 text-red-500" />
+                <span className="font-medium">YouTube</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Text Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" />
+              Paste Text
+            </CardTitle>
+            <CardDescription>
+              Directly paste your content
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => setIsTextDialogOpen(true)}
+              variant="outline"
+              className="w-full h-24 flex flex-col items-center justify-center gap-2 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+            >
+              <ClipboardCopy className="h-6 w-6 text-blue-500" />
+              <span className="font-medium">Paste Content</span>
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Website URL Dialog */}
         <Dialog open={isWebsiteDialogOpen} onOpenChange={setIsWebsiteDialogOpen}>

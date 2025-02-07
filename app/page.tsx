@@ -4,6 +4,7 @@ import HeroSection from "@/components/homepage/hero-section";
 import MarketingCards from "@/components/homepage/marketing-cards";
 import Pricing from "@/components/homepage/pricing";
 import SideBySide from "@/components/homepage/side-by-side";
+import Search from "@/components/homepage/search"
 import PageWrapper from "@/components/wrapper/page-wrapper";
 import config from "@/config";
 
@@ -20,12 +21,15 @@ export default function Home() {
       {/* <div className="flex flex-col p-2 w-full justify-center items-center">
         <MarketingCards />
       </div> */}
-      <div className="max-w-[1200px] p-8 mt-[1rem] lg:mt-[2rem] lg:mb-[5rem]">
+      <div className="flex flex-col p-2 w-full justify-center items-center">
+        <Search />
+      </div>
+      <div className="flex flex-col p-2 w-full justify-center items-center">
         <BlogSample />
       </div>
-      {(config.auth.enabled && config.payments.enabled) && <div>
+      <div>
         <Pricing />
-      </div>}
+      </div>
       {/* <div className="flex justify-center items-center w-full my-[8rem]">
         <AccordionComponent />
       </div> */}

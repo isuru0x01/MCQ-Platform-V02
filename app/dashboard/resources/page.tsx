@@ -20,34 +20,44 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Plus, History, Trophy, BookOpen, Search, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import placeholderImage from "@/public/placeholder.png";
 
 interface Resource {
   id: number;
   url: string;
-  type: 'youtube' | 'article';
+  type: 'youtube' | 'article' | 'document';
   title: string;
   image_url: string | null;
   createdAt: string;
   content: string;
 }
 
-export default function ProjectsPage() {
+export default function ResourcesPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'youtube' | 'article' | 'document'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     async function fetchResources() {
       if (!user) return;
 
       try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
           .from('Resource')
           .select('*')
           .eq('userId', user.id.toString())
           .order('createdAt', { ascending: false });
 
+        if (filter !== 'all') {
+          query = query.eq('type', filter);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         setResources(data || []);
       } catch (error) {
@@ -58,7 +68,7 @@ export default function ProjectsPage() {
     }
 
     fetchResources();
-  }, [user]);
+  }, [user, filter]);
 
   const handleDelete = async (resourceId: number) => {
     try {
@@ -80,6 +90,23 @@ export default function ProjectsPage() {
         description: "Failed to delete resource",
         variant: "destructive",
       });
+    }
+  };
+
+  const filteredResources = resources.filter(resource =>
+    resource.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'youtube':
+        return '🎥';
+      case 'article':
+        return '📄';
+      case 'document':
+        return '📝';
+      default:
+        return '📄';
     }
   };
 
@@ -124,90 +151,120 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Your Resources</h1>
-        <Button>
-          <Link href="/dashboard/submit">Create New Resource</Link>
-        </Button>
+    <div className="min-h-screen bg-background">
+      {/* Top Search Bar */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="relative flex-1 max-w-2xl w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search resources..."
+                className="pl-10 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button asChild variant="default" size="sm" className="gap-2">
+              <Link href="/dashboard/submit">
+                <Plus className="h-4 w-4" />
+                Add Resource
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {resources.map((resource) => (
-          <Card key={resource.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="line-clamp-1">
-                    {resource.title}
-                  </CardTitle>
-                  <CardDescription>
-                    {new Date(resource.createdAt).toLocaleDateString()}
-                  </CardDescription>
-                </div>
-                <AlertDialog>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    asChild
-                  >
-                    <AlertDialogTrigger>
-                      <Trash2 className="h-4 w-4" />
-                    </AlertDialogTrigger>
-                  </Button>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the
-                        resource and all associated quizzes and questions.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDelete(resource.id)}
-                        className="bg-destructive hover:bg-destructive/90"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              {resource.image_url ? (
-                <div className="relative h-[200px] w-full mb-4">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        {/* Filters */}
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+          <Button
+            variant={filter === 'all' ? "secondary" : "ghost"}
+            className="gap-2"
+            size="sm"
+            onClick={() => setFilter('all')}
+          >
+            <BookOpen className="h-4 w-4" />
+            All
+          </Button>
+          <Button
+            variant={filter === 'youtube' ? "secondary" : "ghost"}
+            className="gap-2"
+            size="sm"
+            onClick={() => setFilter('youtube')}
+          >
+            <History className="h-4 w-4" />
+            Videos
+          </Button>
+          <Button
+            variant={filter === 'article' ? "secondary" : "ghost"}
+            className="gap-2"
+            size="sm"
+            onClick={() => setFilter('article')}
+          >
+            <Trophy className="h-4 w-4" />
+            Articles
+          </Button>
+          <Button
+            variant={filter === 'document' ? "secondary" : "ghost"}
+            className="gap-2"
+            size="sm"
+            onClick={() => setFilter('document')}
+          >
+            <Filter className="h-4 w-4" />
+            Documents
+          </Button>
+        </div>
+
+        {/* Resources Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredResources.map((resource) => (
+            <Link key={resource.id} href={`/dashboard/quiz/${resource.id}`}>
+              <Card className="overflow-hidden hover:bg-accent transition-colors group">
+                {/* Thumbnail */}
+                <div className="aspect-video relative overflow-hidden bg-muted">
                   <Image
-                    src={resource.image_url}
-                    alt="Resource thumbnail"
+                    src={resource.image_url || placeholderImage}
+                    alt={resource.title}
                     fill
-                    className="object-cover rounded-md"
+                    className="object-cover"
                   />
                 </div>
-              ) : (
-                <div className="h-[200px] bg-muted flex items-center justify-center rounded-md">
-                  <p className="text-muted-foreground">No image available</p>
+                
+                {/* Content */}
+                <div className="p-4">
+                  <h3 className="font-semibold line-clamp-2 mb-2 group-hover:text-blue-600">
+                    {resource.title}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{getTypeIcon(resource.type)} {resource.type.charAt(0).toUpperCase() + resource.type.slice(1)}</span>
+                    <span>•</span>
+                    <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
+                  </div>
                 </div>
-              )}
-            
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" asChild>
-                <Link href={resource.url} target="_blank">
-                  View Source
-                </Link>
-              </Button>
-              <Button variant="default" asChild>
-                <Link href={`/dashboard/quiz/${resource.id}`}>
-                  Take Quiz
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+              </Card>
+            </Link>
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {filteredResources.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold mb-2">No resources found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery 
+                ? "Try adjusting your search terms"
+                : "Start by adding your first learning resource"}
+            </p>
+            <Button asChild>
+              <Link href="/dashboard/submit">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Resource
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

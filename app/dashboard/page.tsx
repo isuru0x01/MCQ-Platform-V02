@@ -30,11 +30,21 @@ export default function Dashboard() {
 
   const [resources, setResources] = useState<Resource[]>([]);
   const [performanceData, setPerformanceData] = useState<Performance[]>([]);
+  const [activeFilter, setActiveFilter] = useState<'resources' | 'recent' | 'top'>('resources');
 
   useEffect(() => {
-    fetchResources();
+    switch (activeFilter) {
+      case 'recent':
+        fetchRecentResources();
+        break;
+      case 'top':
+        fetchTopPerformingResources();
+        break;
+      default:
+        fetchRecentResources();
+    }
     fetchPerformance();
-  }, []);
+  }, [activeFilter]);
 
   const fetchResources = async () => {
     try {
@@ -64,6 +74,45 @@ export default function Dashboard() {
     }
   };
 
+  const fetchTopPerformingResources = async () => {
+    try {
+      const { data: performanceData, error: perfError } = await supabaseClient
+        .from("Performance")
+        .select("quizId, correctAnswers, totalQuestions")
+        .order("correctAnswers", { ascending: false })
+        .limit(8);
+
+      if (perfError) throw perfError;
+
+      const quizIds = [...new Set(performanceData.map(p => p.quizId))];
+
+      const { data: resourcesData, error: resError } = await supabaseClient
+        .from("Resource")
+        .select("*")
+        .in("id", quizIds)
+        .limit(8);
+
+      if (resError) throw resError;
+      setResources(resourcesData || []);
+    } catch (error) {
+      console.error("Error fetching top performing resources:", error);
+    }
+  };
+
+  const fetchRecentResources = async () => {
+    try {
+      const { data: resourcesData, error } = await supabaseClient
+        .from("Resource")
+        .select("*")
+        .order("createdAt", { ascending: false })
+        .limit(8);
+      if (error) throw error;
+      setResources(resourcesData || []);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Top Action Bar */}
@@ -77,51 +126,73 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Navigation Pills */}
+      {/* Updated Navigation Pills */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-        <Button variant="secondary" className="gap-2" size="sm">
+        <Button 
+          variant={activeFilter === 'resources' ? "secondary" : "ghost"} 
+          className="gap-2" 
+          size="sm"
+          onClick={() => setActiveFilter('resources')}
+        >
           <BookOpen className="h-4 w-4" />
-          All Resources
+          Resources
         </Button>
-        <Button variant="ghost" className="gap-2" size="sm">
+        <Button 
+          variant={activeFilter === 'recent' ? "secondary" : "ghost"} 
+          className="gap-2" 
+          size="sm"
+          onClick={() => setActiveFilter('recent')}
+        >
           <History className="h-4 w-4" />
           Recent
         </Button>
-        <Button variant="ghost" className="gap-2" size="sm">
+        <Button 
+          variant={activeFilter === 'top' ? "secondary" : "ghost"} 
+          className="gap-2" 
+          size="sm"
+          onClick={() => setActiveFilter('top')}
+        >
           <Trophy className="h-4 w-4" />
           Top Performing
         </Button>
       </div>
 
-      {/* Resources Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {resources.map((resource) => (
-          <Link key={resource.id} href={`/dashboard/quiz/${resource.id}`}>
-            <Card className="overflow-hidden hover:bg-accent transition-colors group">
-              {/* Thumbnail */}
-              <div className="aspect-video relative overflow-hidden bg-muted">
-                <Image
-                  src={resource.image_url || placeholderImage}
-                  alt={resource.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              
-              {/* Content */}
-              <div className="p-4">
-                <h3 className="font-semibold line-clamp-2 mb-1 group-hover:text-blue-600">
-                  {resource.title}
-                </h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{resource.type === 'youtube' ? '🎥 Video' : '📄 Article'}</span>
-                  <span>•</span>
-                  <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
+      {/* Resources Grid with conditional title */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">
+          {activeFilter === 'recent' ? 'Recently Added' : 
+           activeFilter === 'top' ? 'Top Performing Resources' : 
+           'All Resources'}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {resources.map((resource) => (
+            <Link key={resource.id} href={`/dashboard/quiz/${resource.id}`}>
+              <Card className="overflow-hidden hover:bg-accent transition-colors group">
+                {/* Thumbnail */}
+                <div className="aspect-video relative overflow-hidden bg-muted">
+                  <Image
+                    src={resource.image_url || placeholderImage}
+                    alt={resource.title}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
-              </div>
-            </Card>
-          </Link>
-        ))}
+                
+                {/* Content */}
+                <div className="p-4">
+                  <h3 className="font-semibold line-clamp-2 mb-1 group-hover:text-blue-600">
+                    {resource.title}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{resource.type === 'youtube' ? '🎥 Video' : '📄 Article'}</span>
+                    <span>•</span>
+                    <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Empty State */}

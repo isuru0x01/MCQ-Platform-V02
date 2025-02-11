@@ -82,10 +82,16 @@ const PricingCard = ({ user, handleCheckout, isYearly, title, priceIdMonthly, pr
             <CardTitle className="text-zinc-700 dark:text-zinc-300 text-lg">{title}</CardTitle>
           )}
           <div className="flex gap-0.5">
-            <h2 className="text-3xl font-bold">{yearlyPrice && isYearly ? "$" + yearlyPrice : monthlyPrice ? "$" + monthlyPrice : "Custom"}</h2>
+          <h2 className="text-3xl font-bold">
+            {yearlyPrice !== undefined && isYearly
+              ? `$${yearlyPrice}`
+              : monthlyPrice !== undefined
+                ? `$${monthlyPrice}`
+                : "Custom"}
+          </h2>
             <span className="flex flex-col justify-end text-sm mb-1">{yearlyPrice && isYearly ? "/year" : monthlyPrice ? "/month" : null}</span>
           </div>
-          <CardDescription className="pt-1.5 h-12">{description}</CardDescription>
+          <CardDescription className="pt-1.5 min-h-[48px]">{description}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {features.map((feature: string) => (
@@ -167,20 +173,20 @@ export default function Pricing() {
   const plans = [
     {
       title: "Basic",
-      monthlyPrice: 10,
-      yearlyPrice: 100,
-      description: "Essential features you need to get started",
-      features: ["Example Feature Number 1", "Example Feature Number 2", "Example Feature Number 3"],
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      description: "Submit 1 resource daily with unlimited quiz attempts. Perfect for steady learners.",
+      features: ["Submit up to 1 resource per day", "Unlimited quiz attempts", "Access to tutorials", "Unlimited Searches",],
       priceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       actionLabel: "Get Started",
     },
     {
       title: "Pro",
-      monthlyPrice: 25,
-      yearlyPrice: 250,
-      description: "Perfect for owners of small & medium businessess",
-      features: ["Example Feature Number 1", "Example Feature Number 2", "Example Feature Number 3"],
+      monthlyPrice: 10,
+      yearlyPrice: 100,
+      description: "Submit 100 resources monthly and take unlimited quizzes. Ideal for serious learners.",
+      features: ["Submit up to 100 resources per month", "Unlimited quiz attempts", "Access to tutorials", "Unlimited Searches"],
       actionLabel: "Get Started",
       priceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
@@ -189,8 +195,8 @@ export default function Pricing() {
     {
       title: "Enterprise",
       price: "Custom",
-      description: "Dedicated support and infrastructure to fit your needs",
-      features: ["Example Feature Number 1", "Example Feature Number 2", "Example Feature Number 3", "Super Exclusive Feature"],
+      description: "Unlimited submissions and quizzes. Best for educational institutions and corporate organizations.",
+      features: ["All Features in Pro Plan", "Unlimited submissions", "Dedicated account manager", "Customized onboarding and training"],
       actionLabel: "Contact Sales",
       priceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
@@ -200,7 +206,7 @@ export default function Pricing() {
 
   return (
     <div>
-      <PricingHeader title="Sample Pricing Plans" subtitle="Use these sample pricing cards in your SAAS" />
+      <PricingHeader title="Pricing" subtitle="💳 Choose Your Subscription Plan 🚀. All accounts start with the 🆓 Basic Plan upon sign-up. Upgrade anytime to unlock more features and enhance your learning experience! 🔓📚." />
       <PricingSwitch onSwitch={togglePricingPeriod} />
       <section className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-8 mt-8">
         {plans.map((plan) => {

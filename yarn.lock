@@ -592,6 +592,11 @@
   dependencies:
     js-tiktoken "^1.0.12"
 
+"@lemonsqueezy/lemonsqueezy.js@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@lemonsqueezy/lemonsqueezy.js/-/lemonsqueezy.js-4.0.0.tgz#69b01731e4fed70a2a838e683e35f79655cadded"
+  integrity sha512-xcY1/lDrY7CpIF98WKiL1ElsfoVhddP7FT0fw7ssOzrFqQsr44HgolKrQZxd9SywsCPn12OTOUieqDIokI3mFg==
+
 "@next/env@15.1.2":
   version "15.1.2"
   resolved "https://registry.yarnpkg.com/@next/env/-/env-15.1.2.tgz#fa36e47bbaa33b9ecac228aa786bb05bbc15351c"

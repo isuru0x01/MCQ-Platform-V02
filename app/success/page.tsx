@@ -1,34 +1,40 @@
-import { Button } from '@/components/ui/button';
-import NavBar from '@/components/wrapper/navbar';
-import Link from 'next/link';
-import Stripe from 'stripe';
+"use client";
 
-// Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
-export default async function SuccessPage(
-  props: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-  }
-) {
-  const searchParams = await props.searchParams;
-
-  const session = await stripe.checkout.sessions.retrieve(searchParams?.session_id as string);
-
-  const jsonString = JSON.stringify(session, null, 2);
-
+export default function SuccessPage() {
   return (
-    <main className="flex min-w-screen flex-col items-center justify-between">
-      <NavBar />
-      <h1 className="mt-[35vh] mb-3 scroll-m-20  text-5xl font-semibold tracking-tight transition-colors first:mt-0">
-        Welcome to Nextjs Starter Kit 🎉
-      </h1>
-      <p className="leading-7 text-center w-[60%]">
-        Let&apos;s get cooking
-      </p>
-      <Link href="/dashboard" className='mt-4'>
-        <Button>Access Dashboard</Button>
-      </Link>
-    </main>
-  )
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md p-8 text-center">
+        <div className="mb-6 flex justify-center">
+          <div className="rounded-full bg-green-100 p-3">
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+        
+        <h1 className="text-2xl font-bold mb-2">
+          Payment Successful!
+        </h1>
+        
+        <p className="text-muted-foreground mb-6">
+          Thank you for upgrading to MCQ Lab Pro! Your account has been successfully upgraded, and you now have access to all premium features.
+        </p>
+
+        <div className="space-y-4">
+          <Button asChild className="w-full">
+            <Link href="/dashboard">
+              Go to Dashboard
+            </Link>
+          </Button>
+          
+          <p className="text-sm text-muted-foreground">
+            If you have any questions, please contact our support team.
+          </p>
+        </div>
+      </Card>
+    </div>
+  );
 }

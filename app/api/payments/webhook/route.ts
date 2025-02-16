@@ -2,8 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { supabaseClient } from "@/lib/supabaseClient";
+import crypto from 'crypto';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const WEBHOOK_SECRET = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -20,7 +23,260 @@ export async function POST(req: NextRequest) {
     }
   );
   const reqText = await req.text();
-  return webhooksHandler(reqText, req, supabase);
+
+  // Verify webhook signature
+  const signature = req.headers.get('X-Signature');
+  
+  const hmac = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(reqText)
+    .digest('hex');
+  
+  if (hmac !== signature) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
+  const event = JSON.parse(reqText);
+  
+  if (event.meta.event_name === 'order_created') {
+    const orderData = event.data.attributes;
+    const customData = event.data.attributes.first_order_item.custom_data || {};
+
+    // Prepare payment data for Supabase
+    const paymentData = {
+      test_mode: orderData.test_mode,
+      currency_rate: orderData.currency_rate,
+      subtotal: orderData.subtotal,
+      discount_total: orderData.discount_total,
+      tax: orderData.tax,
+      total: orderData.total,
+      subtotal_usd: orderData.subtotal_usd,
+      discount_total_usd: orderData.discount_total_usd,
+      tax_usd: orderData.tax_usd,
+      total_usd: orderData.total_usd,
+      refunded: orderData.refunded,
+      refunded_at: orderData.refunded_at,
+      created_at: orderData.created_at,
+      updated_at: orderData.updated_at,
+      amount: orderData.total,
+      paymentDate: orderData.created_at,
+      userId: customData.userId, // From custom data passed during checkout
+      store_id: orderData.store_id,
+      customer_id: orderData.customer_id,
+      order_number: orderData.order_number,
+      stripeId: null, // Not applicable for Lemon Squeezy
+      email: orderData.user_email,
+      tax_rate: orderData.tax_rate,
+      currency: orderData.currency,
+      status: orderData.status,
+      status_formatted: orderData.status_formatted,
+      tax_formatted: orderData.tax_formatted,
+      total_formatted: orderData.total_formatted,
+      identifier: orderData.identifier,
+      subtotal_formatted: orderData.subtotal_formatted,
+      user_name: orderData.user_name,
+      user_email: orderData.user_email,
+      discount_total_formatted: orderData.discount_total_formatted,
+      tax_name: orderData.tax_name
+    };
+
+    // Insert payment record into Supabase
+    const { error: paymentError } = await supabaseClient
+      .from('Payment')
+      .insert([paymentData]);
+
+    if (paymentError) {
+      console.error('Error inserting payment:', paymentError);
+      return NextResponse.json({ error: 'Failed to insert payment' }, { status: 500 });
+    }
+
+    // Update user's subscription status
+    const { error: userError } = await supabaseClient
+      .from('Subscription')
+      .upsert({
+        userId: customData.userId,
+        status: 'active',
+        planId: event.data.attributes.first_order_item.variant_id,
+        currentPeriodEnd: new Date(
+          Date.now() + (orderData.test_mode ? 1 : 30) * 24 * 60 * 60 * 1000
+        ).toISOString(),
+      });
+
+    if (userError) {
+      console.error('Error updating user subscription:', userError);
+      return NextResponse.json({ error: 'Failed to update subscription' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (event.meta.event_name === 'subscription_created') {
+    const subData = event.data.attributes;
+    const firstItem = subData.first_subscription_item;
+
+    // Prepare subscription data for Supabase
+    const subscriptionData = {
+      id: event.data.id,
+      order_item_id: subData.order_item_id,
+      product_id: subData.product_id,
+      variant_id: subData.variant_id,
+      pause: subData.pause,
+      cancelled: subData.cancelled,
+      trial_ends_at: subData.trial_ends_at,
+      billing_anchor: subData.billing_anchor,
+      renews_at: subData.renews_at,
+      ends_at: subData.ends_at,
+      created_at: subData.created_at,
+      updated_at: subData.updated_at,
+      test_mode: subData.test_mode,
+      price: firstItem.quantity, // You might want to get actual price from variant
+      store_id: subData.store_id,
+      customer_id: subData.customer_id,
+      order_id: subData.order_id,
+      name: subData.product_name,
+      description: "", // Add if available from product details
+      variant_name: subData.variant_name,
+      currency: "USD", // Add if available from order/variant details
+      interval: "monthly", // Add if available from variant details
+      user_name: subData.user_name,
+      user_email: subData.user_email,
+      status: subData.status,
+      status_formatted: subData.status_formatted,
+      card_brand: subData.card_brand,
+      card_last_four: subData.card_last_four,
+      product_name: subData.product_name
+    };
+
+    // Insert subscription record into Supabase
+    const { error: subscriptionError } = await supabaseClient
+      .from('Subscription')
+      .upsert([subscriptionData], {
+        onConflict: 'id'
+      });
+
+    if (subscriptionError) {
+      console.error('Error inserting subscription:', subscriptionError);
+      return NextResponse.json(
+        { error: 'Failed to insert subscription' },
+        { status: 500 }
+      );
+    }
+
+    // Also update UserSubscription table for quick access
+    const { error: userSubError } = await supabaseClient
+      .from('Subscription')
+      .upsert({
+        userId: subData.user_email, // Using email as userId since we don't have direct userId
+        status: subData.status,
+        planId: subData.variant_id,
+        subscriptionId: event.data.id,
+        currentPeriodEnd: subData.renews_at,
+        trialEndsAt: subData.trial_ends_at,
+        canceledAt: subData.cancelled ? subData.updated_at : null,
+      });
+
+    if (userSubError) {
+      console.error('Error updating user subscription:', userSubError);
+      return NextResponse.json(
+        { error: 'Failed to update user subscription' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (event.meta.event_name === 'subscription_cancelled') {
+    const subData = event.data.attributes;
+
+    // Update subscription record in Supabase
+    const { error: subscriptionError } = await supabaseClient
+      .from('Subscription')
+      .update({
+        status: subData.status,
+        status_formatted: subData.status_formatted,
+        cancelled: subData.cancelled,
+        ends_at: subData.ends_at,
+        updated_at: subData.updated_at,
+        renews_at: subData.renews_at,
+      })
+      .eq('id', event.data.id);
+
+    if (subscriptionError) {
+      console.error('Error updating subscription:', subscriptionError);
+      return NextResponse.json(
+        { error: 'Failed to update subscription' },
+        { status: 500 }
+      );
+    }
+
+    // Update UserSubscription table
+    const { error: userSubError } = await supabaseClient
+      .from('Subscription')
+      .update({
+        status: 'cancelled',
+        canceledAt: subData.updated_at,
+        currentPeriodEnd: subData.ends_at,
+      })
+      .eq('subscriptionId', event.data.id);
+
+    if (userSubError) {
+      console.error('Error updating user subscription:', userSubError);
+      return NextResponse.json(
+        { error: 'Failed to update user subscription' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (event.meta.event_name === 'subscription_paused') {
+    const subData = event.data.attributes;
+
+    // Update subscription record in Supabase
+    const { error: subscriptionError } = await supabaseClient
+      .from('Subscription')
+      .update({
+        status: subData.status,
+        status_formatted: subData.status_formatted,
+        pause: subData.pause,
+        updated_at: subData.updated_at,
+        renews_at: subData.renews_at,
+        ends_at: subData.ends_at,
+      })
+      .eq('id', event.data.id);
+
+    if (subscriptionError) {
+      console.error('Error updating subscription:', subscriptionError);
+      return NextResponse.json(
+        { error: 'Failed to update subscription' },
+        { status: 500 }
+      );
+    }
+
+    // Update Subscription table
+    const { error: userSubError } = await supabaseClient
+      .from('Subscription')
+      .update({
+        status: 'paused',
+        pausedAt: subData.updated_at,
+        resumesAt: subData.pause?.resumes_at || null,
+      })
+      .eq('subscriptionId', event.data.id);
+
+    if (userSubError) {
+      console.error('Error updating user subscription:', userSubError);
+      return NextResponse.json(
+        { error: 'Failed to update user subscription' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ message: 'Unhandled event type' });
 }
 
 async function getCustomerEmail(customerId: string): Promise<string | null> {

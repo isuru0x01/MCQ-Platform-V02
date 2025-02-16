@@ -276,6 +276,60 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  if (event.meta.event_name === 'subscription_payment_success') {
+    const invoiceData = event.data.attributes;
+    const customData = event.meta.custom_data;
+
+    // Insert payment record into Supabase
+    const paymentData = {
+      test_mode: invoiceData.test_mode,
+      currency_rate: invoiceData.currency_rate,
+      subtotal: invoiceData.subtotal,
+      discount_total: invoiceData.discount_total,
+      tax: invoiceData.tax,
+      total: invoiceData.total,
+      subtotal_usd: invoiceData.subtotal_usd,
+      discount_total_usd: invoiceData.discount_total_usd,
+      tax_usd: invoiceData.tax_usd,
+      total_usd: invoiceData.total_usd,
+      refunded: invoiceData.refunded,
+      refunded_at: invoiceData.refunded_at,
+      created_at: invoiceData.created_at,
+      updated_at: invoiceData.updated_at,
+      amount: invoiceData.total,
+      paymentDate: invoiceData.created_at,
+      userId: customData.user_id,
+      store_id: invoiceData.store_id,
+      customer_id: invoiceData.customer_id,
+      order_number: null,
+      stripeId: null,
+      email: invoiceData.user_email,
+      tax_rate: "0",
+      currency: invoiceData.currency,
+      status: invoiceData.status,
+      status_formatted: invoiceData.status_formatted,
+      tax_formatted: invoiceData.tax_formatted,
+      total_formatted: invoiceData.total_formatted,
+      identifier: event.data.id,
+      subtotal_formatted: invoiceData.subtotal_formatted,
+      user_name: invoiceData.user_name,
+      user_email: invoiceData.user_email,
+      discount_total_formatted: invoiceData.discount_total_formatted,
+      tax_name: null
+    };
+
+    const { error: paymentError } = await supabaseClient
+      .from('Payment')
+      .insert([paymentData]);
+
+    if (paymentError) {
+      console.error('Error inserting payment:', paymentError);
+      return NextResponse.json({ error: 'Failed to insert payment' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
   return NextResponse.json({ message: 'Unhandled event type' });
 }
 

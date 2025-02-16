@@ -30,19 +30,15 @@ const BASIC_PLAN_FEATURES = [
 export default function Settings() {
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useUser();
   
-  let user = null;
-  if (config?.auth?.enabled) {
-    user = useUser();
-  }
-
   useEffect(() => {
     async function fetchSubscription() {
-      if (user?.user?.emailAddresses?.[0]?.emailAddress) {
+      if (user?.emailAddresses?.[0]?.emailAddress) {
         const { data, error } = await supabaseClient
           .from('Subscription')
           .select()
-          .eq('user_email', user.user.emailAddresses[0].emailAddress)
+          .eq('user_email', user.emailAddresses[0].emailAddress)
           .maybeSingle();
 
         if (!error && data) {
@@ -69,15 +65,15 @@ export default function Settings() {
   };
 
   const handleUpgrade = async () => {
-    if (!user?.user) {
+    if (!user) {
       toast.error("Please log in to upgrade");
       return;
     }
 
     try {
       const { data } = await axios.post('/api/payments/create-checkout-session', {
-        userId: user.user.id,
-        email: user.user.emailAddresses[0].emailAddress,
+        userId: user.id,
+        email: user.emailAddresses[0].emailAddress,
         priceId: "695265", // Pro Monthly variant ID
       });
 
@@ -101,16 +97,16 @@ export default function Settings() {
         <div className='flex w-full gap-3 mt-3'>
           <div className='flex flex-col gap-3 w-full'>
             <Label>First Name</Label>
-            <Input disabled defaultValue={user?.user?.firstName ?? ""} />
+            <Input disabled defaultValue={user?.firstName ?? ""} />
           </div>
           <div className='flex flex-col gap-3 w-full'>
             <Label>Last Name</Label>
-            <Input disabled defaultValue={user?.user?.lastName ?? ""} />
+            <Input disabled defaultValue={user?.lastName ?? ""} />
           </div>
         </div>
         <div className='flex flex-col gap-3'>
           <Label>E-mail</Label>
-          <Input disabled defaultValue={user?.user?.emailAddresses?.[0]?.emailAddress ?? ""} />
+          <Input disabled defaultValue={user?.emailAddresses?.[0]?.emailAddress ?? ""} />
         </div>
 
         <h2 className="mt-10 scroll-m-20 border-b pb-2 w-full text-3xl font-semibold tracking-tight transition-colors">

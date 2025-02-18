@@ -26,7 +26,7 @@ export default function DashboardTopNav({ children }: { children: ReactNode }) {
           <SheetContent side="left">
             <SheetHeader>
               <Link href="/">
-                <SheetTitle>Nextjs Starter Kit</SheetTitle>
+                <SheetTitle>MCQ Lab</SheetTitle>
               </Link>
             </SheetHeader>
             <div className="flex flex-col space-y-3 mt-[1rem]">
@@ -34,23 +34,23 @@ export default function DashboardTopNav({ children }: { children: ReactNode }) {
                 <Link href="/dashboard">
                   <Button variant="outline" className="w-full">
                     <HomeIcon className="mr-2 h-4 w-4" />
-                    Home
+                    Dashboard
                   </Button>
                 </Link>
               </DialogClose>
               <DialogClose asChild>
-                <Link href="/dashboard/projects">
+                <Link href="/about">
                   <Button variant="outline" className="w-full">
                     <Folder className="mr-2 h-4 w-4" />
-                    Projects
+                    About
                   </Button>
                 </Link>
               </DialogClose>
               <DialogClose asChild>
-                <Link href="/dashboard/finance">
+                <Link href="/contact">
                   <Button variant="outline" className="w-full">
                     <Banknote className="mr-2 h-4 w-4" />
-                    Finance
+                    Contact
                   </Button>
                 </Link>
               </DialogClose>

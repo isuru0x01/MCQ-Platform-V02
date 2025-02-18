@@ -9,12 +9,12 @@ export default function HeroSection() {
     return (
         <section className='flex flex-col items-center justify-center leading-6 mt-[3rem]' aria-label="Nextjs Starter Kit Hero">
             <h1 className={`${TITLE_TAILWIND_CLASS} scroll-m-20 font-semibold tracking-tight text-center max-w-[1120px] bg-gradient-to-b dark:text-white`}>
-                Master Your Learning with AI-Powered Quizzes
+                📚 Master Your Learning with AI-Powered Quizzes 🤖✨
             </h1>
             <p className="mx-auto max-w-[700px] text-gray-500 text-center mt-2 dark:text-gray-400">
-                Submit educational articles or YouTube lectures, and our platform generates MCQ questions to test your understanding. Track your progress and reinforce your knowledge effectively.
+                📝 Submit educational articles or 🎥 YouTube lectures, and our platform generates 🧠 MCQ questions to test your understanding. 📊 Track your progress and 📈 reinforce your knowledge effectively! 🚀
             </p>
-            <div className="flex justify-center items-center gap-3">
+            {/* <div className="flex justify-center items-center gap-3">
                 <Link href="/dashboard" className="mt-5">
                     <Button className="animate-buttonheartbeat rounded-md bg-blue-600 hover:bg-blue-500 text-sm font-semibold text-white">
                         Get Started
@@ -33,7 +33,7 @@ export default function HeroSection() {
                     </Button>
                 </Link>
                 
-            </div>
+            </div> */}
         </section>
     )
 }

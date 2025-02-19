@@ -57,6 +57,7 @@ export default function SubmitNewURL() {
   const [isWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
   const [isYoutubeDialogOpen, setIsYoutubeDialogOpen] = useState(false);
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Create separate form instances
   const websiteForm = useForm<z.infer<typeof FormSchema>>({
@@ -87,7 +88,10 @@ export default function SubmitNewURL() {
     const file = acceptedFiles[0];
     if (file) {
       setSelectedFile(file);
+      setIsProcessing(true); // Set processing state
       await handleFileUpload(file);
+      setIsProcessing(false); // Reset processing state
+      setSelectedFile(null); // Reset selected file
     }
   }, [user]);
 
@@ -101,7 +105,7 @@ export default function SubmitNewURL() {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
     multiple: false,
-    disabled: !user?.id
+    disabled: !user?.id || isProcessing // Disable when processing
   });
 
   const handleFileUpload = async (file: File) => {
@@ -520,24 +524,32 @@ export default function SubmitNewURL() {
               {...getRootProps()} 
               className={`border-2 border-dashed rounded-lg p-8 transition-colors
                 ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' : 'border-border'}
-                hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer`}
+                ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer'}`}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} disabled={isProcessing} />
               <div className="flex flex-col items-center gap-4">
                 <Upload className={`h-12 w-12 ${isDragActive ? 'text-blue-500' : 'text-gray-400'}`} />
                 <div className="text-center">
-                  <p className="text-sm font-medium mb-1">
-                    {isDragActive ? "Drop files here..." : "Drop files here or click to browse"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Supported: PDF, Word (.docx), PowerPoint (.pptx), Text (.txt), Markdown (.md)
-                  </p>
+                  {isProcessing ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-blue-500">
+                        Selected: {selectedFile?.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Please wait while we process your file...
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium mb-1">
+                        {isDragActive ? "Drop files here..." : "Drop files here or click to browse"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Supported: PDF, Word (.docx), PowerPoint (.pptx), Text (.txt), Markdown (.md)
+                      </p>
+                    </>
+                  )}
                 </div>
-                {selectedFile && (
-                  <p className="text-sm text-blue-500 font-medium mt-2">
-                    Selected: {selectedFile.name} Please wait while we process your file...
-                  </p>
-                )}
               </div>
             </div>
           </CardContent>

@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@clerk/nextjs";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { getClerkClient } from '@/lib/clerk';
+import { getUserById } from "@/app/actions/getUser";
 
 interface Resource {
   id: number;
@@ -46,25 +46,18 @@ export default function QuizPage() {
   const { user } = useUser();
   const [isPerformanceSubmitted, setIsPerformanceSubmitted] = useState(false);
   const [quizId, setQuizId] = useState<number | null>(null); // Add quizId to state
-  const [uploaderName, setUploaderName] = useState<string | null>(null);
+  const [uploaderName, setUploaderName] = useState<string>("");
 
   useEffect(() => {
     const fetchUploaderName = async () => {
-      if (resource?.type === 'document' && resource.userId) {
-        try {
-          const clerk = await getClerkClient();
-          const response = await clerk.users.getUser(resource.userId);
-          const name = [response.firstName, response.lastName].filter(Boolean).join(' ');
-          setUploaderName(name || 'the user');
-        } catch (error) {
-          console.error('Error fetching uploader:', error);
-          setUploaderName('the user');
-        }
+      if (resource?.userId) {
+        const name = await getUserById(resource.userId);
+        setUploaderName(name);
       }
     };
-  
+
     fetchUploaderName();
-  }, [resource]);
+  }, [resource?.userId]);
 
   useEffect(() => {
     async function fetchQuizData() {
@@ -239,17 +232,15 @@ export default function QuizPage() {
                 />
               </div>
             ) : resource.type === "document" ? (
-              // Show upload message only for documents
               <div className="prose max-w-none dark:prose-invert">
-                <p>
-                  The file is uploaded by{" "}
-                  <span className="font-medium">
-                    {uploaderName || "..."}
+                <p className="text-sm text-muted-foreground">
+                  Uploaded by{" "}
+                  <span className="font-medium text-foreground">
+                    {uploaderName || "Loading..."}
                   </span>
                 </p>
               </div>
             ) : !["article", "document"].includes(resource.type) ? (
-              // Show content only for non-article, non-document types
               <div className="prose max-w-none dark:prose-invert">
                 {resource.content}
               </div>

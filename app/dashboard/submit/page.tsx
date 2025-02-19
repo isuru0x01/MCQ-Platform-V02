@@ -75,12 +75,21 @@ export default function SubmitNewURL() {
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to upload files",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const file = acceptedFiles[0];
     if (file) {
       setSelectedFile(file);
       await handleFileUpload(file);
     }
-  }, []);
+  }, [user]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -91,47 +100,66 @@ export default function SubmitNewURL() {
       'text/markdown': ['.md'],
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
-    multiple: false
+    multiple: false,
+    disabled: !user?.id
   });
 
   const handleFileUpload = async (file: File) => {
     try {
       setLoading(true);
+      console.log("Starting file upload, user ID:", user?.id);
+
+      if (!user?.id) {
+        toast({
+          title: "Error",
+          description: "Please log in to upload files",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('userId', user.id);
 
+      console.log("Sending request to /api/upload");
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
-        
       });
 
-      console.log('Request URL:', '/api/upload');
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
+      console.log("Upload response status:", response.status);
+      
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to upload file');
       }
 
-      const { content, title } = await response.json();
+      const data = await response.json();
+      console.log("Upload response data:", data);
 
-      const mcqs = await generateMCQs(content);
-
+      // Create resource
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([{
-          title,
-          content,
+          title: data.title,
+          content: data.content,
           type: 'document',
-          url: '', // Empty for uploaded files
-          userId: user?.id,
+          url: '',
+          userId: user.id,
+          createdAt: new Date().toISOString()
         }])
         .select()
         .single();
 
-      if (resourceError) throw resourceError;
+      if (resourceError) {
+        console.error("Resource creation error:", resourceError);
+        throw resourceError;
+      }
+
+      console.log("Resource created:", resource);
+
+      const mcqs = await generateMCQs(data.content);
 
       const { error: quizError, data: quizData } = await supabaseClient
         .from("Quiz")
@@ -160,7 +188,7 @@ export default function SubmitNewURL() {
 
       if (mcqError) throw mcqError;
 
-      const tutorial = await generateTutorial(content);
+      const tutorial = await generateTutorial(data.content);
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
         .update({ tutorial })
@@ -507,7 +535,7 @@ export default function SubmitNewURL() {
                 </div>
                 {selectedFile && (
                   <p className="text-sm text-blue-500 font-medium mt-2">
-                    Selected: {selectedFile.name}
+                    Selected: {selectedFile.name} Please wait while we process your file...
                   </p>
                 )}
               </div>

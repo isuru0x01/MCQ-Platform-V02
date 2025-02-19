@@ -39,7 +39,7 @@ function getTokenLimit(model: string): number {
   switch (model) {
     case "o1-mini": // OpenAI model
       return 64000;
-    case "meta-llama/Llama-3.3-70B-Instruct-Turbo": // Together AI model
+    case "deepseek-ai/DeepSeek-V3": // Together AI model
       return 5000;
     case "llama-3.3-70b-versatile": // Groq model
       return 6000;
@@ -250,7 +250,7 @@ export async function generateTutorial(content: string): Promise<string> {
 
     try {
       // Fallback to Together AI
-      const model = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+      const model = "deepseek-ai/DeepSeek-V3";
       const tokenLimit = getTokenLimit(model);
       const truncatedContent = truncateText(content, tokenLimit);
 
@@ -344,7 +344,7 @@ export async function generateTitle(content: string): Promise<string> {
 
     try {
       // Fallback to Together AI
-      const model = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+      const model = "deepseek-ai/DeepSeek-V3";
       const tokenLimit = getTokenLimit(model);
       const truncatedContent = truncateText(content, tokenLimit);
 

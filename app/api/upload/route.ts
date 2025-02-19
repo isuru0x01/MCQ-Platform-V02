@@ -5,7 +5,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 import pdf from 'pdf-parse';
 import { generateTitle } from "@/lib/ai";
-import { getTextExtractor  } from 'office-text-extractor';
+import { getTextExtractor } from 'office-text-extractor';
 
 // Ensure these are set for proper API route handling
 export const config = {
@@ -18,92 +18,65 @@ export const config = {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
-  console.log("API route hit - Method:", request.method);
-  
-  if (request.method !== 'POST') {
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
-  }
+// Helper function to sanitize text
+function sanitizeText(text: string) {
+  return text
+    .replace(/\u0000/g, '') // Remove null bytes
+    .replace(/[\uD800-\uDFFF]/g, '') // Remove unpaired surrogate pairs
+    .replace(/[^\x20-\x7E\n\r\t]/g, ' ') // Replace non-printable characters with spaces
+    .trim();
+}
 
+// Remove unused imports and implement PDF handling directly
+async function extractTextFromPdf(buffer: ArrayBuffer) {
+  const data = await pdf(Buffer.from(buffer));
+  return sanitizeText(data.text);
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
+    console.log("Upload route hit");
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+    const userId = formData.get('userId') as string;
 
-    console.log('Request received');
-    console.log('File:', file?.name);
+    console.log("File type:", file?.type);
+    console.log("User ID:", userId);
 
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (!file || !userId) {
+      console.log("Missing required data:", { file: !!file, userId: !!userId });
+      return NextResponse.json({ 
+        error: !file ? 'No file provided' : 'No user ID provided' 
+      }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const tempPath = join(tmpdir(), file.name);
-    await writeFile(tempPath, buffer);
-
-    let content = "";
+    const buffer = await file.arrayBuffer();
+    let content = '';
     let title = file.name;
-    let imageUrl = null;
 
-    const fileType = file.name.split('.').pop()?.toLowerCase();
-
-    const extractor = getTextExtractor();
-
-    try {
-      switch (fileType) {
-        case 'pdf':
-          const pdfData = await pdf(buffer);
-          content = pdfData.text;
-          title = await generateTitle(content);
-          break;
-
-        case 'docx':
-          const docxResult = await mammoth.extractRawText({ path: tempPath });
-          content = docxResult.value;
-          title = await generateTitle(content);
-          break;
-
-        case 'txt':
-        case 'md':
-          content = buffer.toString('utf-8');
-          title = await generateTitle(content);
-          break;
-
-        case 'pptx':
-        case 'ppt':
-        case 'pptm':
-          try {
-            content = await extractor.extractText({ input: buffer, type: 'buffer' })
-            title = await generateTitle(content);
-          } catch (pptError) {
-            console.error('PowerPoint extraction error:', pptError);
-            throw new Error('Failed to extract content from PowerPoint file');
-          }
-          break;
-
-        default:
-          throw new Error("Unsupported file type. Please upload PDF, DOCX, TXT, MD, or PowerPoint files.");
-      }
-
-      // Clean up temp file
-      await unlink(tempPath).catch(console.error);
-
-      return NextResponse.json({
-        content,
-        imageUrl,
-        title
-      }, { status: 200 });
-
-    } catch (error) {
-      // Clean up temp file on error
-      await unlink(tempPath).catch(console.error);
-      throw error;
+    if (file.type === 'application/pdf') {
+      console.log("Processing PDF file");
+      content = await extractTextFromPdf(buffer);
+      title = await generateTitle(content);
+    } else {
+      console.log("Processing non-PDF file");
+      content = sanitizeText(await file.text());
+      title = await generateTitle(content);
     }
+
+    console.log("Content extracted, length:", content.length);
+    console.log("Generated title:", title);
+
+    if (!content) {
+      return NextResponse.json({ error: 'No content could be extracted' }, { status: 400 });
+    }
+
+    return NextResponse.json({ content, title, userId });
 
   } catch (error) {
-    console.error("Error processing file:", error);
+    console.error('Error processing file:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to process file" },
+      { error: error instanceof Error ? error.message : 'Failed to process file' },
       { status: 500 }
     );
   }

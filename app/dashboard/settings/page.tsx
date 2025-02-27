@@ -136,9 +136,7 @@ export default function Settings() {
         error.response?.data?.details || 
         error.response?.data?.error || 
         'Failed to start checkout process. Please try again.'
-    } catch (error) {
-      console.error('Error during checkout:', error);
-      toast.error('Failed to start checkout process');
+      );
     }
   };
 

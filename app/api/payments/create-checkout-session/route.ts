@@ -9,6 +9,8 @@ export async function POST(req: NextRequest) {
     apiKey: process.env.LEMON_SQUEEZY_API_KEY!,
   });
 
+  console.log("LemonSqueezy API Key:", process.env.LEMON_SQUEEZY_API_KEY);
+
   try {
     // Log environment variables (redacted for security)
     console.log('API Key exists:', !!process.env.LEMON_SQUEEZY_API_KEY);

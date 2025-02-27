@@ -3,12 +3,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCheckout, type NewCheckout, lemonSqueezySetup } from '@lemonsqueezy/lemonsqueezy.js';
 
-// Initialize LemonSqueezy with API key
-lemonSqueezySetup({
-  apiKey: process.env.LEMON_SQUEEZY_API_KEY!,
-});
-
 export async function POST(req: NextRequest) {
+  // Initialize LemonSqueezy with API key
+  lemonSqueezySetup({
+    apiKey: process.env.LEMON_SQUEEZY_API_KEY!,
+  });
+
   try {
     // Log environment variables (redacted for security)
     console.log('API Key exists:', !!process.env.LEMON_SQUEEZY_API_KEY);

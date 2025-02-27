@@ -107,18 +107,35 @@ export default function Settings() {
     }
 
     try {
-      const { data } = await axios.post('/api/payments/create-checkout-session', {
+      // Show loading state
+      toast.loading("Preparing checkout...");
+
+      const response = await axios.post('/api/payments/create-checkout-session', {
         userId: user.id,
         email: user.emailAddresses[0].emailAddress,
         priceId: "695265", // Pro Monthly variant ID
         name: `${user.firstName} ${user.lastName}`.trim()
       });
 
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+      if (response.data.checkoutUrl) {
+        // Dismiss loading toast
+        toast.dismiss();
+        // Redirect to checkout
+        window.location.href = response.data.checkoutUrl;
       } else {
         throw new Error('No checkout URL received');
       }
+    } catch (error: any) {
+      // Dismiss loading toast
+      toast.dismiss();
+      
+      console.error('Checkout error:', error);
+      
+      // Show more detailed error message
+      toast.error(
+        error.response?.data?.details || 
+        error.response?.data?.error || 
+        'Failed to start checkout process. Please try again.'
     } catch (error) {
       console.error('Error during checkout:', error);
       toast.error('Failed to start checkout process');
@@ -246,7 +263,7 @@ export default function Settings() {
                 </div>
               )}
             </CardContent>
-            {(!subscription || subscription.status !== 'active') && (
+            {!subscription?.status === 'active' && (
               <CardFooter className="pt-4">
                 <Button 
                   onClick={handleUpgrade}

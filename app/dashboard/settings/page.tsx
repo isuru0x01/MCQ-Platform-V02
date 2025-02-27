@@ -75,6 +75,7 @@ export default function Settings() {
         userId: user.id,
         email: user.emailAddresses[0].emailAddress,
         priceId: "695265", // Pro Monthly variant ID
+        name: `${user.firstName} ${user.lastName}`.trim()
       });
 
       if (data.checkoutUrl) {

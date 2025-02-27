@@ -10,7 +10,7 @@ lemonSqueezySetup({
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, email, priceId } = await req.json();
+    const { userId, name, email, priceId } = await req.json();
 
     if (!userId || !email || !priceId) {
       return NextResponse.json(
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       checkoutData: {
         email,
         custom: { userId },
+        name, // Add user's name here
       },
       testMode: process.env.NODE_ENV === 'development',
     };

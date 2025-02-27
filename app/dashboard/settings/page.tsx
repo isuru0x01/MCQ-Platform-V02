@@ -18,6 +18,7 @@ interface SubscriptionDetails {
   renews_at: string;
   ends_at: string | null;
   trial_ends_at: string | null;
+  available_points: number | null;
 }
 
 const BASIC_PLAN_FEATURES = [
@@ -30,25 +31,60 @@ const BASIC_PLAN_FEATURES = [
 export default function Settings() {
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [todaySubmissionAvailable, setTodaySubmissionAvailable] = useState(false);
   const { user } = useUser();
   
   useEffect(() => {
-    async function fetchSubscription() {
+    async function fetchSubscriptionAndUsage() {
       if (user?.emailAddresses?.[0]?.emailAddress) {
-        const { data, error } = await supabaseClient
+        const email = user.emailAddresses[0].emailAddress;
+        
+        // Fetch subscription details
+        const { data: subData, error: subError } = await supabaseClient
           .from('Subscription')
-          .select()
-          .eq('user_email', user.emailAddresses[0].emailAddress)
+          .select('*')
+          .eq('user_email', email)
           .maybeSingle();
 
-        if (!error && data) {
-          setSubscription(data);
+        if (!subError && subData) {
+          // If Pro user and points are null but subscription is active
+          if (subData.status === 'active' && subData.available_points === null) {
+            const renewsAt = subData.renews_at ? new Date(subData.renews_at) : null;
+            if (renewsAt && renewsAt > new Date()) {
+              // Update points to 100
+              const { error: updateError } = await supabaseClient
+                .from('Subscription')
+                .update({ available_points: 100 })
+                .eq('user_email', email);
+              
+              if (!updateError) {
+                subData.available_points = 100;
+              }
+            }
+          }
+          setSubscription(subData);
         }
+
+        // For basic users, check today's submission availability
+        if (!subData || subData.status !== 'active') {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const { data: todaySubmissions } = await supabaseClient
+            .from('Resource')
+            .select('created_at')
+            .eq('userId', email)
+            .gte('created_at', today.toISOString())
+            .limit(1);
+
+          setTodaySubmissionAvailable(!todaySubmissions?.length);
+        }
+
         setLoading(false);
       }
     }
 
-    fetchSubscription();
+    fetchSubscriptionAndUsage();
   }, [user]);
 
   const getStatusColor = (status: string) => {
@@ -121,19 +157,23 @@ export default function Settings() {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span>{subscription ? subscription.product_name : 'Basic Plan'}</span>
-                <Badge className={subscription ? getStatusColor(subscription.status) : 'bg-gray-500'}>
-                  {subscription ? subscription.status_formatted : 'Free Tier'}
+                <Badge className={subscription?.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}>
+                  {subscription?.status === 'active' ? 'Pro' : 'Free Tier'}
                 </Badge>
               </CardTitle>
-              {!subscription && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Submit 1 resource daily with unlimited quiz attempts. Perfect for steady learners.
-                </p>
-              )}
             </CardHeader>
             <CardContent className="space-y-4">
-              {subscription ? (
+              {subscription?.status === 'active' ? (
                 <>
+                  <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                    <h3 className="font-medium mb-2">Resource Submissions</h3>
+                    <p className="text-2xl font-bold text-green-600">
+                      {subscription.available_points} points remaining
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Your points will reset when your subscription renews on {new Date(subscription.renews_at).toLocaleDateString()}
+                    </p>
+                  </div>
                   {subscription.trial_ends_at && (
                     <div>
                       <Label>Trial Ends</Label>
@@ -155,6 +195,28 @@ export default function Settings() {
                 </>
               ) : (
                 <div className="space-y-4">
+                  <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                    <h3 className="font-medium mb-2">Resource Submissions</h3>
+                    {todaySubmissionAvailable ? (
+                      <div className="space-y-2">
+                        <p className="text-green-600">
+                          ✓ You can submit one resource today
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Upgrade to Pro to submit up to 100 resources per month and unlock premium features!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-yellow-600">
+                          ⚠️ Daily submission limit reached
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Upgrade to Pro to submit more resources and unlock unlimited access!
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   <div className="text-muted-foreground">
                     Your current plan includes:
                   </div>
@@ -184,7 +246,7 @@ export default function Settings() {
                 </div>
               )}
             </CardContent>
-            {!subscription && (
+            {!subscription?.status === 'active' && (
               <CardFooter className="pt-4">
                 <Button 
                   onClick={handleUpgrade}

@@ -163,25 +163,67 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
 
 async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
-  const subscriptionData = transformSubscriptionData(subData);
+  
+  // Insert into Subscription table
+  const subscriptionData = {
+    createdAt: subData.created_at,
+    name: subData.product_name,
+    description: '',
+    price: subData.price,
+    currency: subData.currency || 'USD',
+    interval: 'monthly',
+    store_id: subData.store_id,
+    customer_id: subData.customer_id,
+    order_id: subData.order_id,
+    order_item_id: subData.order_item_id,
+    product_id: subData.product_id,
+    variant_id: subData.variant_id,
+    product_name: subData.product_name,
+    variant_name: subData.variant_name,
+    user_name: subData.user_name,
+    user_email: subData.user_email,
+    status: subData.status,
+    status_formatted: subData.status_formatted,
+    card_brand: subData.card_brand,
+    card_last_four: subData.card_last_four,
+    pause: subData.pause,
+    cancelled: subData.cancelled,
+    trial_ends_at: subData.trial_ends_at,
+    billing_anchor: subData.billing_anchor,
+    renews_at: subData.renews_at,
+    ends_at: subData.ends_at,
+    created_at: subData.created_at,
+    updated_at: subData.updated_at,
+    test_mode: subData.test_mode,
+    available_points: 100 // Initialize with 100 points for new subscriptions
+  };
 
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
-    .upsert([subscriptionData], { onConflict: 'id' });
+    .upsert([subscriptionData], {
+      onConflict: 'user_email'
+    });
 
   if (subscriptionError) {
     console.error('Error inserting subscription:', subscriptionError);
     return errorResponse('Failed to insert subscription', 500);
   }
 
-  const userSubUpdate = createUserSubscriptionUpdate(subData);
-  const { error: userSubError } = await supabaseClient
-    .from('Subscription')
-    .upsert(userSubUpdate);
+  // Initialize user_usage for new subscription
+  const { error: usageError } = await supabaseClient
+    .from('user_usage')
+    .upsert([{
+      user_id: subData.user_email,
+      plan_type: 'pro',
+      period_start: new Date().toISOString(),
+      submission_count: 0
+    }], {
+      onConflict: 'user_id'
+    });
 
-  if (userSubError) {
-    console.error('Error updating user subscription:', userSubError);
-    return errorResponse('Failed to update user subscription', 500);
+  if (usageError) {
+    console.error('Error initializing user usage:', usageError);
+    return errorResponse('Failed to initialize user usage', 500);
   }
 
   return successResponse();
@@ -269,9 +311,21 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const invoiceData = event.data.attributes;
   const customData = event.meta.custom_data || {};
 
-  // Prepare payment data for Supabase
+  // Insert into Payment table
   const paymentData = {
-    test_mode: invoiceData.test_mode,
+    createdAt: invoiceData.created_at,
+    stripeId: null, // LemonSqueezy doesn't use Stripe IDs
+    email: invoiceData.user_email,
+    amount: invoiceData.total,
+    currency: invoiceData.currency,
+    paymentDate: invoiceData.created_at,
+    userId: customData.userId || invoiceData.user_email,
+    store_id: invoiceData.store_id,
+    customer_id: invoiceData.customer_id,
+    identifier: event.data.id,
+    order_number: invoiceData.order_number,
+    user_name: invoiceData.user_name,
+    user_email: invoiceData.user_email,
     currency_rate: invoiceData.currency_rate,
     subtotal: invoiceData.subtotal,
     discount_total: invoiceData.discount_total,
@@ -281,33 +335,21 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     discount_total_usd: invoiceData.discount_total_usd,
     tax_usd: invoiceData.tax_usd,
     total_usd: invoiceData.total_usd,
-    refunded: invoiceData.refunded,
-    refunded_at: invoiceData.refunded_at,
-    created_at: invoiceData.created_at,
-    updated_at: invoiceData.updated_at,
-    amount: invoiceData.total,
-    paymentDate: invoiceData.created_at,
-    userId: customData.userId || invoiceData.user_email, // Fallback to email if userId is not provided
-    store_id: invoiceData.store_id,
-    customer_id: invoiceData.customer_id,
-    order_number: null,
-    stripeId: null,
-    email: invoiceData.user_email,
-    tax_rate: "0",
-    currency: invoiceData.currency,
+    tax_name: invoiceData.tax_name || null,
+    tax_rate: invoiceData.tax_rate || "0",
     status: invoiceData.status,
     status_formatted: invoiceData.status_formatted,
+    refunded: invoiceData.refunded,
+    refunded_at: invoiceData.refunded_at,
+    subtotal_formatted: invoiceData.subtotal_formatted,
+    discount_total_formatted: invoiceData.discount_total_formatted,
     tax_formatted: invoiceData.tax_formatted,
     total_formatted: invoiceData.total_formatted,
-    identifier: event.data.id,
-    subtotal_formatted: invoiceData.subtotal_formatted,
-    user_name: invoiceData.user_name,
-    user_email: invoiceData.user_email,
-    discount_total_formatted: invoiceData.discount_total_formatted,
-    tax_name: null,
+    created_at: invoiceData.created_at,
+    updated_at: invoiceData.updated_at,
+    test_mode: invoiceData.test_mode
   };
 
-  // Insert payment record into Supabase
   const { error: paymentError } = await supabaseClient
     .from('Payment')
     .insert([paymentData]);
@@ -317,20 +359,22 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     return errorResponse('Failed to insert payment', 500);
   }
 
-  // Update subscription renewal date if applicable
-  if (invoiceData.subscription_id) {
-    const { error: subscriptionError } = await supabaseClient
-      .from('Subscription')
-      .update({
-        renews_at: invoiceData.created_at, // Update renewal date to the payment date
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', invoiceData.subscription_id);
+  // Update user_usage table
+  const periodStart = new Date();
+  const { error: usageError } = await supabaseClient
+    .from('user_usage')
+    .upsert([{
+      user_id: invoiceData.user_email,
+      plan_type: 'pro',
+      period_start: periodStart.toISOString(),
+      submission_count: 0
+    }], {
+      onConflict: 'user_id'
+    });
 
-    if (subscriptionError) {
-      console.error('Error updating subscription:', subscriptionError);
-      return errorResponse('Failed to update subscription', 500);
-    }
+  if (usageError) {
+    console.error('Error updating user usage:', usageError);
+    return errorResponse('Failed to update user usage', 500);
   }
 
   return successResponse();

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { checkUserLimits, decrementProPoints } from "@/app/actions/checkUserLimits";
 
 export const maxDuration = 60;
 
@@ -122,6 +123,18 @@ export default function SubmitNewURL() {
         return;
       }
 
+      // Check user limits
+      const limitCheck = await checkUserLimits(user.emailAddresses[0].emailAddress);
+      
+      if (!limitCheck.canSubmit) {
+        toast({
+          title: "Submission Limit Reached",
+          description: limitCheck.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', user.id);
@@ -205,6 +218,11 @@ export default function SubmitNewURL() {
         description: "File uploaded and processed successfully.",
       });
 
+      // After successful submission, decrement points for pro users
+      if (limitCheck.isPro) {
+        await decrementProPoints(user.emailAddresses[0].emailAddress);
+      }
+
       router.push(`/dashboard/quiz/${resource.id}`);
 
     } catch (error) {
@@ -249,6 +267,18 @@ export default function SubmitNewURL() {
         toast({
           title: "Authentication Error",
           description: "Please log in to submit content.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check user limits
+      const limitCheck = await checkUserLimits(user.emailAddresses[0].emailAddress);
+      
+      if (!limitCheck.canSubmit) {
+        toast({
+          title: "Submission Limit Reached",
+          description: limitCheck.message,
           variant: "destructive",
         });
         return;
@@ -369,6 +399,11 @@ export default function SubmitNewURL() {
       youtubeForm.reset();
       setIsWebsiteDialogOpen(false);
       setIsYoutubeDialogOpen(false);
+
+      // After successful submission, decrement points for pro users
+      if (limitCheck.isPro) {
+        await decrementProPoints(user.emailAddresses[0].emailAddress);
+      }
 
       router.push(`/dashboard/quiz/${resource.id}`);
 
@@ -720,24 +755,24 @@ export default function SubmitNewURL() {
                   }} 
                   className="space-y-4"
                 >
-                  <FormField
+            <FormField
                     control={youtubeForm.control}
-                    name="url"
-                    render={({ field }) => (
-                      <FormItem>
+              name="url"
+              render={({ field }) => (
+                <FormItem>
                         <FormLabel className="text-blue-500">Paste URL *</FormLabel>
-                        <FormControl>
+                  <FormControl>
                           <Input 
                             placeholder="https://www.youtube.com/watch?v=" 
                             disabled={loading} 
                             {...field} 
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
                   <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg space-y-2">
                     <h4 className="font-medium">Notes</h4>
                     <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
@@ -759,8 +794,8 @@ export default function SubmitNewURL() {
                       {loading ? "Processing..." : "Import Video"}
                     </Button>
                   </div>
-                </form>
-              </Form>
+          </form>
+        </Form>
             </div>
           </DialogContent>
         </Dialog>

@@ -6,7 +6,6 @@ import { createCheckout, type NewCheckout, lemonSqueezySetup } from '@lemonsquee
 // Initialize LemonSqueezy with API key
 lemonSqueezySetup({
   apiKey: process.env.LEMON_SQUEEZY_API_KEY!,
-  sandbox: process.env.NODE_ENV === 'development' // Enable sandbox mode in development
 });
 
 export async function POST(req: NextRequest) {

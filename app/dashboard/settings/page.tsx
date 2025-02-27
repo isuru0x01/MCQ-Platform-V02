@@ -246,7 +246,7 @@ export default function Settings() {
                 </div>
               )}
             </CardContent>
-            {!subscription?.status === 'active' && (
+            {(!subscription || subscription.status !== 'active') && (
               <CardFooter className="pt-4">
                 <Button 
                   onClick={handleUpgrade}

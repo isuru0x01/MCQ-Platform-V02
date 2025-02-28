@@ -163,6 +163,13 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
 
 async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
+  const customData = event.meta.custom_data || {};
+  const userId = customData.userId; // Clerk userId from checkout
+
+  if (!userId) {
+    console.error('Missing userId in custom data:', event.meta);
+    return errorResponse('Missing userId in webhook data', 400);
+  }
   
   // Insert into Subscription table
   const subscriptionData = {
@@ -215,7 +222,7 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const { error: usageError } = await supabaseClient
     .from('user_usage')
     .upsert([{
-      user_id: subData.user_email,
+      user_id: userId, // Use Clerk userId instead of email
       plan_type: 'pro',
       period_start: periodStart.toISOString(),
       period_end: periodEnd.toISOString(),
@@ -313,6 +320,12 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
 async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const invoiceData = event.data.attributes;
   const customData = event.meta.custom_data || {};
+  const userId = customData.userId; // Clerk userId from checkout
+
+  if (!userId) {
+    console.error('Missing userId in custom data:', event.meta);
+    return errorResponse('Missing userId in webhook data', 400);
+  }
 
   // Insert into Payment table
   const paymentData = {
@@ -322,7 +335,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     amount: invoiceData.total,
     currency: invoiceData.currency,
     paymentDate: invoiceData.created_at,
-    userId: customData.userId || invoiceData.user_email,
+    userId: userId, // Use Clerk userId
     store_id: invoiceData.store_id,
     customer_id: invoiceData.customer_id,
     identifier: event.data.id,
@@ -378,7 +391,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const { error: usageError } = await supabaseClient
     .from('user_usage')
     .upsert([{
-      user_id: invoiceData.user_email,
+      user_id: userId, // Use Clerk userId instead of email
       plan_type: 'pro',
       period_start: periodStart.toISOString(),
       period_end: periodEnd.toISOString(),

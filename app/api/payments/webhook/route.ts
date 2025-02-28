@@ -168,8 +168,8 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const subscriptionData = {
     createdAt: subData.created_at,
     name: subData.product_name,
-    description: '',
-    price: subData.price,
+    description: subData.product_name || '',
+    price: subData.price || 0,
     currency: subData.currency || 'USD',
     interval: 'monthly',
     store_id: subData.store_id,
@@ -187,21 +187,20 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
     card_brand: subData.card_brand,
     card_last_four: subData.card_last_four,
     pause: subData.pause,
-    cancelled: subData.cancelled,
+    cancelled: subData.cancelled || false,
     trial_ends_at: subData.trial_ends_at,
     billing_anchor: subData.billing_anchor,
     renews_at: subData.renews_at,
     ends_at: subData.ends_at,
     created_at: subData.created_at,
     updated_at: subData.updated_at,
-    test_mode: subData.test_mode,
-    available_points: 100 // Initialize with 100 points for new subscriptions
+    test_mode: subData.test_mode
   };
 
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
     .upsert([subscriptionData], {
-      onConflict: 'user_email'
+      onConflict: 'user_email,order_id'
     });
 
   if (subscriptionError) {
@@ -210,12 +209,16 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   }
 
   // Initialize user_usage for new subscription
+  const periodStart = new Date(subData.created_at);
+  const periodEnd = subData.renews_at ? new Date(subData.renews_at) : new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+
   const { error: usageError } = await supabaseClient
     .from('user_usage')
     .upsert([{
       user_id: subData.user_email,
       plan_type: 'pro',
-      period_start: new Date().toISOString(),
+      period_start: periodStart.toISOString(),
+      period_end: periodEnd.toISOString(),
       submission_count: 0
     }], {
       onConflict: 'user_id'
@@ -314,7 +317,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   // Insert into Payment table
   const paymentData = {
     createdAt: invoiceData.created_at,
-    stripeId: null, // LemonSqueezy doesn't use Stripe IDs
+    stripeId: null,
     email: invoiceData.user_email,
     amount: invoiceData.total,
     currency: invoiceData.currency,
@@ -335,7 +338,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     discount_total_usd: invoiceData.discount_total_usd,
     tax_usd: invoiceData.tax_usd,
     total_usd: invoiceData.total_usd,
-    tax_name: invoiceData.tax_name || null,
+    tax_name: invoiceData.tax_name || '',
     tax_rate: invoiceData.tax_rate || "0",
     status: invoiceData.status,
     status_formatted: invoiceData.status_formatted,
@@ -359,14 +362,26 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     return errorResponse('Failed to insert payment', 500);
   }
 
-  // Update user_usage table
+  // Get the subscription details to set correct period dates
+  const { data: subscriptionData } = await supabaseClient
+    .from('Subscription')
+    .select('renews_at')
+    .eq('user_email', invoiceData.user_email)
+    .single();
+
+  // Update user_usage table with new period
   const periodStart = new Date();
+  const periodEnd = subscriptionData?.renews_at 
+    ? new Date(subscriptionData.renews_at)
+    : new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+
   const { error: usageError } = await supabaseClient
     .from('user_usage')
     .upsert([{
       user_id: invoiceData.user_email,
       plan_type: 'pro',
       period_start: periodStart.toISOString(),
+      period_end: periodEnd.toISOString(),
       submission_count: 0
     }], {
       onConflict: 'user_id'

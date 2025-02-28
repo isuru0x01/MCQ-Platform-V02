@@ -3,67 +3,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCheckout, type NewCheckout, lemonSqueezySetup } from "@lemonsqueezy/lemonsqueezy.js";
 
-// Ensure the API key exists before initializing
-if (!process.env.LEMON_SQUEEZY_API_KEY) {
-  console.error("LEMON_SQUEEZY_API_KEY is not defined in environment variables.");
-} else {
-  lemonSqueezySetup({
-    apiKey: process.env.LEMON_SQUEEZY_API_KEY,
-  });
+interface CheckoutResponse {
+  data: {
+    attributes: {
+      url: string;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
 }
 
-export async function POST(req: NextRequest) {
-  console.log("LemonSqueezy API Key:", process.env.LEMON_SQUEEZY_API_KEY);
-  console.log("LEMON_SQUEEZY_STORE_ID:", process.env.LEMON_SQUEEZY_STORE_ID);
+// Initialize LemonSqueezy with API key
+if (!process.env.LEMON_SQUEEZY_API_KEY || !process.env.LEMON_SQUEEZY_STORE_ID) {
+  throw new Error("Missing required environment variables: LEMON_SQUEEZY_API_KEY or LEMON_SQUEEZY_STORE_ID");
+}
 
+lemonSqueezySetup({
+  apiKey: process.env.LEMON_SQUEEZY_API_KEY,
+});
+
+export async function POST(req: NextRequest) {
   try {
-    // Log environment variable existence (redacted for security)
-    console.log("API Key exists:", !!process.env.LEMON_SQUEEZY_API_KEY);
-    console.log("Store ID exists:", !!process.env.LEMON_SQUEEZY_STORE_ID);
-    
     const { userId, name, email, priceId } = await req.json();
 
     // Validate required fields
     if (!userId || !email || !priceId) {
-      console.error("Missing required parameters:", { userId, email, priceId });
       return NextResponse.json(
-        { error: "Missing required parameters." },
+        { error: "Missing required parameters" },
         { status: 400 }
       );
     }
-
-    // Log checkout attempt
-    console.log("Creating checkout for:", { userId, email, priceId });
 
     const newCheckout: NewCheckout = {
       productOptions: {
         name: "MCQ Lab Pro",
         description: "Upgrade to Pro plan",
-        redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings`,
+        redirectUrl: process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings`
+          : 'http://mcqlab.click/dashboard/settings',
       },
       checkoutOptions: {
         embed: false,
         media: true,
         logo: true,
-        dark: true, // Enable dark mode support
+        dark: true,
       },
       checkoutData: {
         email,
         custom: {
           userId,
-          email, // Include email in custom data for webhook
+          email,
         },
         name,
       },
       testMode: process.env.NODE_ENV === "development",
     };
-
-    // Log checkout configuration
-    console.log("Checkout configuration:", {
-      storeId: process.env.LEMON_SQUEEZY_STORE_ID,
-      priceId,
-      options: newCheckout,
-    });
 
     const response = await createCheckout(
       process.env.LEMON_SQUEEZY_STORE_ID!,
@@ -71,33 +65,33 @@ export async function POST(req: NextRequest) {
       newCheckout
     );
 
-    // Log the entire API response for debugging
-    console.log("LemonSqueezy API Response:", response);
+    console.log('Checkout response:', JSON.stringify(response, null, 2));
 
-    // Safely access the checkout URL using optional chaining
-    // response.data?.data.attributes.url;
-    const checkoutUrl = response.data?.data.attributes.url;
-    if (!checkoutUrl) {
-      console.error("Unexpected response structure:", response);
-      throw new Error("Checkout URL not found in response");
+    // Handle validation errors
+    if (response.statusCode === 422) {
+      const error = (response as any).data?.errors?.[0];
+      throw new Error(error?.detail || "Validation error in checkout creation");
     }
 
-    console.log("Checkout created successfully:", checkoutUrl);
+    // For successful creation (201), get the URL from the correct path
+    const checkoutUrl = (response as any).data?.data?.attributes?.url;
+    if (!checkoutUrl) {
+      console.error('Invalid checkout response structure:', response);
+      throw new Error("Failed to get checkout URL from response");
+    }
+
     return NextResponse.json({ checkoutUrl });
 
   } catch (error: any) {
-    console.error("Checkout creation failed:", {
-      message: error.message,
-      response: error.response?.data,
-      stack: error.stack,
-    });
+    console.error("Checkout creation failed:", error);
 
     return NextResponse.json(
-      { 
+      {
         error: "Failed to create checkout session",
-        details: error.response?.data?.message || error.message,
+        details: error.message,
+        debug: process.env.NODE_ENV === "development" ? error : undefined
       },
-      { status: error.response?.status || 500 }
+      { status: 500 }
     );
   }
 }

@@ -197,7 +197,7 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
     variant_id: subData.variant_id,
     product_name: subData.product_name,
     variant_name: subData.variant_name,
-    user_name: subData.user_name,
+    user_name: subData.user_name || subData.user_email,
     user_email: subData.user_email,
     status: subData.status,
     status_formatted: subData.status_formatted,

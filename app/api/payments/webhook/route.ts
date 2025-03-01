@@ -140,7 +140,7 @@ async function handleLemonEvent(event: LemonWebhookEvent) {
 // Event Handlers
 async function handleOrderCreated(event: LemonWebhookEvent) {
   const { attributes } = event.data;
-  const customData = attributes.first_order_item.custom_data || {};
+  const customData = event.meta.custom_data || {};
 
   const paymentData = transformPaymentData(attributes, customData);
   const { error: paymentError } = await supabaseClient

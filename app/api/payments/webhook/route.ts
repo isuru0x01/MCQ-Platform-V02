@@ -225,18 +225,19 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
     return errorResponse('Failed to insert subscription', 500);
   }
 
-  // Initialize user_usage for new subscription
+  // Initialize user_usage for new subscription with 100 points
   const periodStart = new Date(subData.created_at);
   const periodEnd = subData.renews_at ? new Date(subData.renews_at) : new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   const { error: usageError } = await supabaseClient
     .from('user_usage')
     .upsert([{
-      user_id: userId, // Use Clerk userId instead of email
+      user_id: userId,
       plan_type: 'pro',
       period_start: periodStart.toISOString(),
       period_end: periodEnd.toISOString(),
-      submission_count: 0
+      submission_count: 0,
+      subscription_points: 100 // Initialize with 100 points for Pro plan
     }], {
       onConflict: 'user_id'
     });
@@ -345,7 +346,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     amount: invoiceData.total,
     currency: invoiceData.currency,
     paymentDate: invoiceData.created_at,
-    userId: userId, // Use Clerk userId
+    userId: userId,
     store_id: invoiceData.store_id,
     customer_id: invoiceData.customer_id,
     identifier: event.data.id,
@@ -392,7 +393,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     .eq('user_email', invoiceData.user_email)
     .single();
 
-  // Update user_usage table with new period
+  // Update user_usage table with new period and reset points to 100
   const periodStart = new Date();
   const periodEnd = subscriptionData?.renews_at 
     ? new Date(subscriptionData.renews_at)
@@ -401,11 +402,12 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const { error: usageError } = await supabaseClient
     .from('user_usage')
     .upsert([{
-      user_id: userId, // Use Clerk userId instead of email
+      user_id: userId,
       plan_type: 'pro',
       period_start: periodStart.toISOString(),
       period_end: periodEnd.toISOString(),
-      submission_count: 0
+      submission_count: 0,
+      subscription_points: 100 // Reset to 100 points for new billing period
     }], {
       onConflict: 'user_id'
     });

@@ -100,8 +100,9 @@ export async function POST(req: NextRequest) {
     if (!isValid) return errorResponse('Invalid signature', 401);
 
     const result = await handleLemonEvent(event);
-    return result ? result : NextResponse.json({ message: 'Unhandled event type' });
+    return result ? result : NextResponse.json({ message: 'Event handled successfully' });
   } catch (error) {
+    
     console.error('Webhook processing error:', error);
     return errorResponse('Internal server error', 500);
   }
@@ -507,8 +508,12 @@ function createSubscriptionUpdate(orderData: any, customData: any): Subscription
   return {
     userId: userId,
     status: 'active',
-    planId: orderData.first_order_item.variant_id,
-    currentPeriodEnd: calculatePeriodEnd(orderData),
+    variant_id: orderData.first_order_item.variant_id,
+    renews_at: calculatePeriodEnd(orderData),
+    created_at: orderData.created_at,
+    updated_at: orderData.updated_at,
+    user_email: customData.email,
+    test_mode: orderData.test_mode
   };
 }
 

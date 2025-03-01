@@ -184,7 +184,7 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   // Insert into Subscription table
   const subscriptionData = {
     createdAt: subData.created_at,
-    name: subData.product_name,
+    name: subData.product_name || '',
     description: subData.product_name || '',
     price: subData.price || 0,
     currency: subData.currency || 'USD',

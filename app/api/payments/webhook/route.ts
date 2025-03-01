@@ -6,7 +6,11 @@ import crypto from 'crypto';
 interface LemonWebhookEvent {
   meta: {
     event_name: string;
-    custom_data?: { userId?: string };
+    custom_data?: { 
+      userId?: string;
+      user_id?: string;
+      email?: string;
+    };
   };
   data: {
     id?: string;
@@ -161,10 +165,15 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
   return successResponse();
 }
 
+// Helper function to get userId from custom data
+function getUserIdFromCustomData(customData: any): string | null {
+  return customData?.userId || customData?.user_id || null;
+}
+
 async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
   const customData = event.meta.custom_data || {};
-  const userId = customData.userId; // Clerk userId from checkout
+  const userId = getUserIdFromCustomData(customData);
 
   if (!userId) {
     console.error('Missing userId in custom data:', event.meta);
@@ -320,7 +329,7 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
 async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const invoiceData = event.data.attributes;
   const customData = event.meta.custom_data || {};
-  const userId = customData.userId; // Clerk userId from checkout
+  const userId = getUserIdFromCustomData(customData);
 
   if (!userId) {
     console.error('Missing userId in custom data:', event.meta);
@@ -410,6 +419,11 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
 
 // Data Transformers
 function transformPaymentData(orderData: any, customData: any): PaymentData {
+  const userId = getUserIdFromCustomData(customData);
+  if (!userId) {
+    throw new Error('Missing userId in custom data');
+  }
+
   return {
     test_mode: orderData.test_mode,
     currency_rate: orderData.currency_rate,
@@ -427,7 +441,7 @@ function transformPaymentData(orderData: any, customData: any): PaymentData {
     updated_at: orderData.updated_at,
     amount: orderData.total,
     paymentDate: orderData.created_at,
-    userId: customData.userId,
+    userId: userId,
     store_id: orderData.store_id,
     customer_id: orderData.customer_id,
     order_number: orderData.order_number,
@@ -485,8 +499,13 @@ function transformSubscriptionData(subData: any): SubscriptionData {
 
 // Helper Functions
 function createSubscriptionUpdate(orderData: any, customData: any): SubscriptionData {
+  const userId = getUserIdFromCustomData(customData);
+  if (!userId) {
+    throw new Error('Missing userId in custom data');
+  }
+
   return {
-    userId: customData.userId,
+    userId: userId,
     status: 'active',
     planId: orderData.first_order_item.variant_id,
     currentPeriodEnd: calculatePeriodEnd(orderData),

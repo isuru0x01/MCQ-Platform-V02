@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       checkoutData: {
         email,
         custom: {
-          userId,
+          user_id: userId,
           email,
         },
         name,

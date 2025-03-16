@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     if (!isValid) return errorResponse('Invalid signature', 401);
 
     const result = await handleLemonEvent(event);
-    return result ? result : NextResponse.json({ message: 'Unhandled event type' });
+    return result || errorResponse('Unhandled event type', 400);
   } catch (error) {
     console.error('Webhook processing error:', error);
     return errorResponse('Internal server error', 500);
@@ -108,13 +108,32 @@ async function verifyWebhook(req: NextRequest) {
   const reqText = await req.text();
   const signature = req.headers.get('X-Signature');
 
-  const hmac = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
-    .update(reqText)
-    .digest('hex');
+  if (!signature) {
+    console.error("Missing signature in headers");
+    return { isValid: false, event: JSON.parse(reqText) as LemonWebhookEvent };
+  }
+
+  let expectedSignature: Buffer;
+  let receivedSignature: Buffer;
+
+  try {
+    expectedSignature = Buffer.from(
+      crypto.createHmac('sha256', WEBHOOK_SECRET).update(reqText).digest('hex'),
+      'hex'
+    );
+    receivedSignature = Buffer.from(signature, 'hex');
+  } catch (error) {
+    console.error("Error processing signature:", error);
+    return { isValid: false, event: JSON.parse(reqText) as LemonWebhookEvent };
+  }
+
+  if (expectedSignature.length !== receivedSignature.length) {
+    console.error("Signature length mismatch");
+    return { isValid: false, event: JSON.parse(reqText) as LemonWebhookEvent };
+  }
 
   return {
-    isValid: hmac === signature,
+    isValid: crypto.timingSafeEqual(expectedSignature, receivedSignature),
     event: JSON.parse(reqText) as LemonWebhookEvent,
   };
 }
@@ -136,12 +155,13 @@ async function handleLemonEvent(event: LemonWebhookEvent) {
 // Event Handlers
 async function handleOrderCreated(event: LemonWebhookEvent) {
   const { attributes } = event.data;
-  const customData = attributes.first_order_item.custom_data || {};
+  const customData = attributes.first_order_item?.custom_data || {};
 
   const paymentData = transformPaymentData(attributes, customData);
+  // Use upsert with onConflict for idempotency
   const { error: paymentError } = await supabaseClient
     .from('Payment')
-    .insert([paymentData]);
+    .upsert([paymentData], { onConflict: 'identifier' });
 
   if (paymentError) {
     console.error('Error inserting payment:', paymentError);
@@ -149,9 +169,10 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
   }
 
   const subscriptionUpdate = createSubscriptionUpdate(attributes, customData);
+  // Use upsert with onConflict for idempotency
   const { error: userError } = await supabaseClient
     .from('Subscription')
-    .upsert(subscriptionUpdate);
+    .upsert([subscriptionUpdate], { onConflict: 'userId' });
 
   if (userError) {
     console.error('Error updating subscription:', userError);
@@ -161,37 +182,15 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
   return successResponse();
 }
 
-async function handleSubscriptionCreated(event: LemonWebhookEvent) {
-  const subData = event.data.attributes;
-  const customData = event.meta.custom_data || {};
-  const userId = customData.user_id || customData.userId || subData.user_email;
-  
-  // Transform subscription data and add userId
-  const subscriptionData = transformSubscriptionData(subData);
-  subscriptionData.userId = userId; // Add userId to the main subscription record
-  
-  // Upsert complete subscription data
-  const { error: subscriptionError } = await supabaseClient
-    .from('Subscription')
-    .upsert([subscriptionData], { onConflict: 'id' });
-
-  if (subscriptionError) {
-    console.error('Error inserting subscription:', subscriptionError);
-    return errorResponse('Failed to insert subscription', 500);
-  }
-
-  // No need for a second upsert since we've already included userId
-  
-  return successResponse();
-}
-
+// Update handleSubscriptionCancelled to use upsert
 async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
   const customData = event.meta.custom_data || {};
-  const userId = customData.user_id || customData.userId || subData.user_email;
-
+  const userId = customData.user_id || customData.userId || subData.user_email || "unknown";
+  
   // Update the subscription record in Supabase with all necessary fields
   const subscriptionUpdate = {
+    id: event.data.id, // Include ID for upsert
     status: subData.status,
     status_formatted: subData.status_formatted,
     cancelled: subData.cancelled,
@@ -203,10 +202,10 @@ async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
     userId: userId // Ensure userId is included
   };
 
+  // Use upsert instead of update for idempotency
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
-    .update(subscriptionUpdate)
-    .eq('id', event.data.id);
+    .upsert([subscriptionUpdate], { onConflict: 'id' });
 
   if (subscriptionError) {
     console.error('Error updating subscription:', subscriptionError);
@@ -216,6 +215,7 @@ async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
   return successResponse();
 }
 
+// Update handleSubscriptionPaused to use upsert
 async function handleSubscriptionPaused(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
   const customData = event.meta.custom_data || {};
@@ -223,6 +223,7 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
 
   // Update the subscription record in Supabase with all necessary fields
   const subscriptionUpdate = {
+    id: event.data.id, // Include ID for upsert
     status: subData.status,
     status_formatted: subData.status_formatted,
     pause: subData.pause,
@@ -234,10 +235,10 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
     userId: userId // Ensure userId is included
   };
 
+  // Use upsert instead of update for idempotency
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
-    .update(subscriptionUpdate)
-    .eq('id', event.data.id);
+    .upsert([subscriptionUpdate], { onConflict: 'id' });
 
   if (subscriptionError) {
     console.error('Error updating subscription:', subscriptionError);
@@ -253,6 +254,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const userId = customData.user_id || customData.userId || invoiceData.user_email;
 
   // Prepare payment data for Supabase
+  // Fix the paymentData object in handleSubscriptionPaymentSuccess
   const paymentData = {
     test_mode: invoiceData.test_mode,
     currency_rate: invoiceData.currency_rate,
@@ -273,7 +275,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     userId: userId,
     store_id: invoiceData.store_id,
     customer_id: invoiceData.customer_id,
-    order_number: null,
+    order_number: invoiceData.order_number || null,
     stripeId: null,
     email: invoiceData.user_email,
     tax_rate: "0",
@@ -282,18 +284,18 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     status_formatted: invoiceData.status_formatted,
     tax_formatted: invoiceData.tax_formatted,
     total_formatted: invoiceData.total_formatted,
-    identifier: event.data.id,
+    identifier: event.data.id, // Ensure we have a unique identifier for upsert
     subtotal_formatted: invoiceData.subtotal_formatted,
     user_name: invoiceData.user_name,
     user_email: invoiceData.user_email,
     discount_total_formatted: invoiceData.discount_total_formatted || "$0.00",
-    tax_name: null,
+    tax_name: invoiceData.tax_name || null,
   };
 
-  // Insert payment record into Supabase
+  // Insert payment record into Supabase with idempotency check
   const { error: paymentError } = await supabaseClient
     .from('Payment')
-    .insert([paymentData]);
+    .upsert([paymentData], { onConflict: 'identifier' });
 
   if (paymentError) {
     console.error('Error inserting payment:', paymentError);
@@ -316,18 +318,20 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
 
     // Update subscription with new renewal date
     const subscriptionUpdate = {
+      id: invoiceData.subscription_id, // Include ID for upsert
       renews_at: calculateNextRenewalDate(invoiceData.created_at, subscriptionData?.interval || 'monthly'),
       updated_at: new Date().toISOString(),
       status: 'active',
       status_formatted: 'Active',
       card_brand: invoiceData.card_brand,
       card_last_four: invoiceData.card_last_four,
+      userId: userId // Ensure userId is included
     };
 
+    // Use upsert instead of update for idempotency
     const { error: subscriptionError } = await supabaseClient
       .from('Subscription')
-      .update(subscriptionUpdate)
-      .eq('id', invoiceData.subscription_id);
+      .upsert([subscriptionUpdate], { onConflict: 'id' });
 
     if (subscriptionError) {
       console.error('Error updating subscription:', subscriptionError);
@@ -347,10 +351,10 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
       subscription_points: calculateSubscriptionPoints(subscriptionData?.product_name || 'pro')
     };
 
-    // Upsert to user_usage table
+    // Upsert to user_usage table with composite key constraint
     const { error: usageError } = await supabaseClient
       .from('user_usage')
-      .upsert([usageData], { onConflict: 'user_id' });
+      .upsert([usageData], { onConflict: 'user_id, period_start' });
 
     if (usageError) {
       console.error('Error updating user usage:', usageError);
@@ -361,51 +365,8 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   return successResponse();
 }
 
-// Helper function to calculate next renewal date based on interval
-function calculateNextRenewalDate(currentDate: string, interval: string): string {
-  const date = new Date(currentDate);
-  
-  switch (interval.toLowerCase()) {
-    case 'monthly':
-      date.setMonth(date.getMonth() + 1);
-      break;
-    case 'yearly':
-    case 'annual':
-      date.setFullYear(date.getFullYear() + 1);
-      break;
-    case 'weekly':
-      date.setDate(date.getDate() + 7);
-      break;
-    default:
-      date.setMonth(date.getMonth() + 1); // Default to monthly
-  }
-  
-  return date.toISOString();
-}
-
-// Helper function to determine subscription points based on plan
-function calculateSubscriptionPoints(planName: string): number {
-  const planPoints = {
-    'pro': 100,
-    'premium': 250,
-    'enterprise': 500,
-    // Add other plan tiers as needed
-  };
-  
-  const normalizedPlanName = planName.toLowerCase();
-  
-  // Check if the plan name contains any of the keys
-  for (const [key, points] of Object.entries(planPoints)) {
-    if (normalizedPlanName.includes(key)) {
-      return points;
-    }
-  }
-  
-  return 50; // Default points for unknown plans
-}
-
-// Data Transformers
-// Update the transformPaymentData function to handle userId correctly
+// Update transformPaymentData to ensure identifier is always set
+// Fix the transformPaymentData function
 function transformPaymentData(orderData: any, customData: any): PaymentData {
 // Extract userId and ensure it's properly formatted
 const userId = customData.userId || customData.user_id || orderData.user_email;
@@ -414,11 +375,11 @@ return {
 test_mode: orderData.test_mode,
 currency_rate: orderData.currency_rate,
 subtotal: orderData.subtotal,
-discount_total: orderData.discount_total,
+discount_total: orderData.discount_total || 0,
 tax: orderData.tax,
 total: orderData.total,
 subtotal_usd: orderData.subtotal_usd,
-discount_total_usd: orderData.discount_total_usd,
+discount_total_usd: orderData.discount_total_usd || 0,
 tax_usd: orderData.tax_usd,
 total_usd: orderData.total_usd,
 refunded: orderData.refunded,
@@ -427,7 +388,7 @@ created_at: orderData.created_at,
 updated_at: orderData.updated_at,
 amount: orderData.total,
 paymentDate: orderData.created_at,
-userId: customData.userId,
+userId: userId,
 store_id: orderData.store_id,
 customer_id: orderData.customer_id,
 order_number: orderData.order_number,
@@ -439,12 +400,12 @@ status: orderData.status,
 status_formatted: orderData.status_formatted,
 tax_formatted: orderData.tax_formatted,
 total_formatted: orderData.total_formatted,
-identifier: orderData.identifier,
+identifier: orderData.identifier || `order_${orderData.order_number || crypto.randomUUID()}`, // Ensure we have a unique identifier
 subtotal_formatted: orderData.subtotal_formatted,
 user_name: orderData.user_name,
 user_email: orderData.user_email,
-discount_total_formatted: orderData.discount_total_formatted,
-tax_name: orderData.tax_name,
+discount_total_formatted: orderData.discount_total_formatted || "$0.00",
+tax_name: orderData.tax_name || null,
 };
 }
 
@@ -500,6 +461,62 @@ currentPeriodEnd: calculatePeriodEnd(orderData),
 };
 }
 
+// Add the missing handleSubscriptionCreated function
+async function handleSubscriptionCreated(event: LemonWebhookEvent) {
+  const subData = event.data.attributes;
+  const customData = event.meta.custom_data || {};
+  const userId = customData.userId || customData.user_id || subData.user_email;
+  
+  // Transform subscription data and add userId
+  const subscriptionData = transformSubscriptionData(subData);
+  subscriptionData.userId = userId; // Add userId to the main subscription record
+  
+  // Upsert complete subscription data
+  const { error: subscriptionError } = await supabaseClient
+    .from('Subscription')
+    .upsert([subscriptionData], { onConflict: 'id' });
+
+  if (subscriptionError) {
+    console.error('Error inserting subscription:', subscriptionError);
+    return errorResponse('Failed to insert subscription', 500);
+  }
+  
+  return successResponse();
+}
+
+// Add this function before the handleSubscriptionPaymentSuccess function
+function calculateNextRenewalDate(startDate: string, interval: string): string {
+  const date = new Date(startDate);
+  
+  switch (interval.toLowerCase()) {
+    case 'yearly':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    case 'quarterly':
+      date.setMonth(date.getMonth() + 3);
+      break;
+    case 'monthly':
+    default:
+      date.setMonth(date.getMonth() + 1);
+      break;
+  }
+  
+  return date.toISOString();
+}
+
+// Add this function to calculate subscription points based on plan type
+function calculateSubscriptionPoints(planType: string): number {
+  switch (planType.toLowerCase()) {
+    case 'pro':
+      return 30;
+    case 'premium':
+      return 100;
+    default:
+      return 10;
+  }
+}
+
+// DELETE EVERYTHING BELOW THIS LINE - These are all duplicate functions
 function createUserSubscriptionUpdate(subData: any): SubscriptionData {
 return {
 userId: subData.user_email,
@@ -513,9 +530,9 @@ canceledAt: subData.cancelled ? subData.updated_at : null,
 }
 
 function calculatePeriodEnd(orderData: any): string {
-return new Date(
-Date.now() + (orderData.test_mode ? 1 : 30) * 24 * 60 * 60 * 1000
-).toISOString();
+  const interval = orderData.interval || 'monthly';
+  const days = interval === 'monthly' ? 30 : interval === 'yearly' ? 365 : 30;
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function successResponse() {
@@ -525,5 +542,3 @@ return NextResponse.json({ success: true });
 function errorResponse(message: string, status: number) {
 return NextResponse.json({ error: message }, { status });
 }
-
-// Test

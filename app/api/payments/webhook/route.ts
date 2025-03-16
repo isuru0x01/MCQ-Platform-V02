@@ -163,8 +163,14 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
 
 async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
+  const customData = event.meta.custom_data || {};
+  const userId = customData.user_id || customData.userId || subData.user_email;
+  
+  // Transform subscription data and add userId
   const subscriptionData = transformSubscriptionData(subData);
-
+  subscriptionData.userId = userId; // Add userId to the main subscription record
+  
+  // Upsert complete subscription data
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
     .upsert([subscriptionData], { onConflict: 'id' });
@@ -174,53 +180,37 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
     return errorResponse('Failed to insert subscription', 500);
   }
 
-  const userSubUpdate = createUserSubscriptionUpdate(subData);
-  const { error: userSubError } = await supabaseClient
-    .from('Subscription')
-    .upsert(userSubUpdate);
-
-  if (userSubError) {
-    console.error('Error updating user subscription:', userSubError);
-    return errorResponse('Failed to update user subscription', 500);
-  }
-
+  // No need for a second upsert since we've already included userId
+  
   return successResponse();
 }
 
 async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
+  const customData = event.meta.custom_data || {};
+  const userId = customData.user_id || customData.userId || subData.user_email;
 
-  // Update the subscription record in Supabase
+  // Update the subscription record in Supabase with all necessary fields
+  const subscriptionUpdate = {
+    status: subData.status,
+    status_formatted: subData.status_formatted,
+    cancelled: subData.cancelled,
+    ends_at: subData.ends_at,
+    updated_at: subData.updated_at,
+    renews_at: subData.renews_at,
+    canceledAt: subData.updated_at,
+    currentPeriodEnd: subData.ends_at,
+    userId: userId // Ensure userId is included
+  };
+
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
-    .update({
-      status: subData.status,
-      status_formatted: subData.status_formatted,
-      cancelled: subData.cancelled,
-      ends_at: subData.ends_at,
-      updated_at: subData.updated_at,
-      renews_at: subData.renews_at,
-    })
+    .update(subscriptionUpdate)
     .eq('id', event.data.id);
 
   if (subscriptionError) {
     console.error('Error updating subscription:', subscriptionError);
     return errorResponse('Failed to update subscription', 500);
-  }
-
-  // Update the UserSubscription table
-  const { error: userSubError } = await supabaseClient
-    .from('Subscription')
-    .update({
-      status: 'cancelled',
-      canceledAt: subData.updated_at,
-      currentPeriodEnd: subData.ends_at,
-    })
-    .eq('subscriptionId', event.data.id);
-
-  if (userSubError) {
-    console.error('Error updating user subscription:', userSubError);
-    return errorResponse('Failed to update user subscription', 500);
   }
 
   return successResponse();
@@ -228,38 +218,30 @@ async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
 
 async function handleSubscriptionPaused(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
+  const customData = event.meta.custom_data || {};
+  const userId = customData.user_id || customData.userId || subData.user_email;
 
-  // Update the subscription record in Supabase
+  // Update the subscription record in Supabase with all necessary fields
+  const subscriptionUpdate = {
+    status: subData.status,
+    status_formatted: subData.status_formatted,
+    pause: subData.pause,
+    updated_at: subData.updated_at,
+    renews_at: subData.renews_at,
+    ends_at: subData.ends_at,
+    pausedAt: subData.updated_at,
+    resumesAt: subData.pause?.resumes_at || null,
+    userId: userId // Ensure userId is included
+  };
+
   const { error: subscriptionError } = await supabaseClient
     .from('Subscription')
-    .update({
-      status: subData.status,
-      status_formatted: subData.status_formatted,
-      pause: subData.pause,
-      updated_at: subData.updated_at,
-      renews_at: subData.renews_at,
-      ends_at: subData.ends_at,
-    })
+    .update(subscriptionUpdate)
     .eq('id', event.data.id);
 
   if (subscriptionError) {
     console.error('Error updating subscription:', subscriptionError);
     return errorResponse('Failed to update subscription', 500);
-  }
-
-  // Update the UserSubscription table
-  const { error: userSubError } = await supabaseClient
-    .from('Subscription')
-    .update({
-      status: 'paused',
-      pausedAt: subData.updated_at,
-      resumesAt: subData.pause?.resumes_at || null,
-    })
-    .eq('subscriptionId', event.data.id);
-
-  if (userSubError) {
-    console.error('Error updating user subscription:', userSubError);
-    return errorResponse('Failed to update user subscription', 500);
   }
 
   return successResponse();
@@ -462,10 +444,14 @@ function transformPaymentData(orderData: any, customData: any): PaymentData {
   };
 }
 
+// Update the transform function to properly handle userId
 function transformSubscriptionData(subData: any): SubscriptionData {
   const firstItem = subData.first_subscription_item;
+  const customData = subData.custom_data || {};
+  
   return {
     id: subData.id,
+    userId: customData.user_id || customData.userId || subData.user_email, // Add userId here
     order_item_id: subData.order_item_id,
     product_id: subData.product_id,
     variant_id: subData.variant_id,
@@ -494,6 +480,9 @@ function transformSubscriptionData(subData: any): SubscriptionData {
     card_brand: subData.card_brand,
     card_last_four: subData.card_last_four,
     product_name: subData.product_name,
+    currentPeriodEnd: subData.renews_at, // Add user subscription fields to main record
+    subscriptionId: subData.id,
+    planId: subData.variant_id,
   };
 }
 

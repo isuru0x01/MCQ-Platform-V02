@@ -34,15 +34,31 @@ export default function Settings() {
   
   useEffect(() => {
     async function fetchSubscription() {
-      if (user?.emailAddresses?.[0]?.emailAddress) {
-        const { data, error } = await supabaseClient
+      if (user?.id) {
+        // First try to fetch by userId
+        const { data: dataById, error: errorById } = await supabaseClient
           .from('Subscription')
           .select()
-          .eq('user_email', user.emailAddresses[0].emailAddress)
+          .eq('userId', user.id)
           .maybeSingle();
 
-        if (!error && data) {
-          setSubscription(data);
+        if (!errorById && dataById) {
+          setSubscription(dataById);
+          setLoading(false);
+          return;
+        }
+
+        // If not found by userId, try by email
+        if (user.emailAddresses?.[0]?.emailAddress) {
+          const { data: dataByEmail, error: errorByEmail } = await supabaseClient
+            .from('Subscription')
+            .select()
+            .eq('user_email', user.emailAddresses[0].emailAddress)
+            .maybeSingle();
+
+          if (!errorByEmail && dataByEmail) {
+            setSubscription(dataByEmail);
+          }
         }
         setLoading(false);
       }

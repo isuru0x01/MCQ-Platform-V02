@@ -405,121 +405,125 @@ function calculateSubscriptionPoints(planName: string): number {
 }
 
 // Data Transformers
+// Update the transformPaymentData function to handle userId correctly
 function transformPaymentData(orderData: any, customData: any): PaymentData {
-  return {
-    test_mode: orderData.test_mode,
-    currency_rate: orderData.currency_rate,
-    subtotal: orderData.subtotal,
-    discount_total: orderData.discount_total,
-    tax: orderData.tax,
-    total: orderData.total,
-    subtotal_usd: orderData.subtotal_usd,
-    discount_total_usd: orderData.discount_total_usd,
-    tax_usd: orderData.tax_usd,
-    total_usd: orderData.total_usd,
-    refunded: orderData.refunded,
-    refunded_at: orderData.refunded_at,
-    created_at: orderData.created_at,
-    updated_at: orderData.updated_at,
-    amount: orderData.total,
-    paymentDate: orderData.created_at,
-    userId: customData.userId,
-    store_id: orderData.store_id,
-    customer_id: orderData.customer_id,
-    order_number: orderData.order_number,
-    stripeId: null,
-    email: orderData.user_email,
-    tax_rate: orderData.tax_rate,
-    currency: orderData.currency,
-    status: orderData.status,
-    status_formatted: orderData.status_formatted,
-    tax_formatted: orderData.tax_formatted,
-    total_formatted: orderData.total_formatted,
-    identifier: orderData.identifier,
-    subtotal_formatted: orderData.subtotal_formatted,
-    user_name: orderData.user_name,
-    user_email: orderData.user_email,
-    discount_total_formatted: orderData.discount_total_formatted,
-    tax_name: orderData.tax_name,
-  };
+// Extract userId and ensure it's properly formatted
+const userId = customData.userId || customData.user_id || orderData.user_email;
+
+return {
+test_mode: orderData.test_mode,
+currency_rate: orderData.currency_rate,
+subtotal: orderData.subtotal,
+discount_total: orderData.discount_total,
+tax: orderData.tax,
+total: orderData.total,
+subtotal_usd: orderData.subtotal_usd,
+discount_total_usd: orderData.discount_total_usd,
+tax_usd: orderData.tax_usd,
+total_usd: orderData.total_usd,
+refunded: orderData.refunded,
+refunded_at: orderData.refunded_at,
+created_at: orderData.created_at,
+updated_at: orderData.updated_at,
+amount: orderData.total,
+paymentDate: orderData.created_at,
+userId: customData.userId,
+store_id: orderData.store_id,
+customer_id: orderData.customer_id,
+order_number: orderData.order_number,
+stripeId: null,
+email: orderData.user_email,
+tax_rate: orderData.tax_rate,
+currency: orderData.currency,
+status: orderData.status,
+status_formatted: orderData.status_formatted,
+tax_formatted: orderData.tax_formatted,
+total_formatted: orderData.total_formatted,
+identifier: orderData.identifier,
+subtotal_formatted: orderData.subtotal_formatted,
+user_name: orderData.user_name,
+user_email: orderData.user_email,
+discount_total_formatted: orderData.discount_total_formatted,
+tax_name: orderData.tax_name,
+};
 }
 
 // Update the transform function to properly handle userId
 function transformSubscriptionData(subData: any): SubscriptionData {
-  const firstItem = subData.first_subscription_item;
-  const customData = subData.custom_data || {};
-  
-  return {
-    id: subData.id,
-    userId: customData.user_id || customData.userId || subData.user_email, // Add userId here
-    order_item_id: subData.order_item_id,
-    product_id: subData.product_id,
-    variant_id: subData.variant_id,
-    pause: subData.pause,
-    cancelled: subData.cancelled,
-    trialEndsAt: subData.trial_ends_at,
-    billing_anchor: subData.billing_anchor,
-    renews_at: subData.renews_at,
-    ends_at: subData.ends_at,
-    created_at: subData.created_at,
-    updated_at: subData.updated_at,
-    test_mode: subData.test_mode,
-    price: firstItem?.quantity,
-    store_id: subData.store_id,
-    customer_id: subData.customer_id,
-    order_id: subData.order_id,
-    name: subData.product_name,
-    description: '',
-    variant_name: subData.variant_name,
-    currency: 'USD',
-    interval: 'monthly',
-    user_name: subData.user_name,
-    user_email: subData.user_email,
-    status: subData.status,
-    status_formatted: subData.status_formatted,
-    card_brand: subData.card_brand,
-    card_last_four: subData.card_last_four,
-    product_name: subData.product_name,
-    currentPeriodEnd: subData.renews_at, // Add user subscription fields to main record
-    subscriptionId: subData.id,
-    planId: subData.variant_id,
-  };
+const firstItem = subData.first_subscription_item;
+const customData = subData.custom_data || {};
+
+return {
+id: subData.id,
+userId: customData.user_id || customData.userId || subData.user_email, // Add userId here
+order_item_id: subData.order_item_id,
+product_id: subData.product_id,
+variant_id: subData.variant_id,
+pause: subData.pause,
+cancelled: subData.cancelled,
+trialEndsAt: subData.trial_ends_at,
+billing_anchor: subData.billing_anchor,
+renews_at: subData.renews_at,
+ends_at: subData.ends_at,
+created_at: subData.created_at,
+updated_at: subData.updated_at,
+test_mode: subData.test_mode,
+price: firstItem?.quantity,
+store_id: subData.store_id,
+customer_id: subData.customer_id,
+order_id: subData.order_id,
+name: subData.product_name,
+description: '',
+variant_name: subData.variant_name,
+currency: 'USD',
+interval: 'monthly',
+user_name: subData.user_name,
+user_email: subData.user_email,
+status: subData.status,
+status_formatted: subData.status_formatted,
+card_brand: subData.card_brand,
+card_last_four: subData.card_last_four,
+product_name: subData.product_name,
+currentPeriodEnd: subData.renews_at, // Add user subscription fields to main record
+subscriptionId: subData.id,
+planId: subData.variant_id,
+};
 }
 
 // Helper Functions
 function createSubscriptionUpdate(orderData: any, customData: any): SubscriptionData {
-  return {
-    userId: customData.userId,
-    status: 'active',
-    planId: orderData.first_order_item.variant_id,
-    currentPeriodEnd: calculatePeriodEnd(orderData),
-  };
+return {
+userId: customData.userId,
+status: 'active',
+planId: orderData.first_order_item.variant_id,
+currentPeriodEnd: calculatePeriodEnd(orderData),
+};
 }
 
 function createUserSubscriptionUpdate(subData: any): SubscriptionData {
-  return {
-    userId: subData.user_email,
-    status: subData.status,
-    planId: subData.variant_id,
-    subscriptionId: subData.id,
-    currentPeriodEnd: subData.renews_at,
-    trialEndsAt: subData.trial_ends_at,
-    canceledAt: subData.cancelled ? subData.updated_at : null,
-  };
+return {
+userId: subData.user_email,
+status: subData.status,
+planId: subData.variant_id,
+subscriptionId: subData.id,
+currentPeriodEnd: subData.renews_at,
+trialEndsAt: subData.trial_ends_at,
+canceledAt: subData.cancelled ? subData.updated_at : null,
+};
 }
 
 function calculatePeriodEnd(orderData: any): string {
-  return new Date(
-    Date.now() + (orderData.test_mode ? 1 : 30) * 24 * 60 * 60 * 1000
-  ).toISOString();
+return new Date(
+Date.now() + (orderData.test_mode ? 1 : 30) * 24 * 60 * 60 * 1000
+).toISOString();
 }
 
 function successResponse() {
-  return NextResponse.json({ success: true });
+return NextResponse.json({ success: true });
 }
 
 function errorResponse(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+return NextResponse.json({ error: message }, { status });
 }
 
 // Test

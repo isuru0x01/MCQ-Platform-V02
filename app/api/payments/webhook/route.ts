@@ -6,7 +6,7 @@ import crypto from 'crypto';
 interface LemonWebhookEvent {
   meta: {
     event_name: string;
-    custom_data?: { userId?: string };
+    custom_data?: { userId?: string; user_id?: string };
   };
   data: {
     id?: string;
@@ -268,17 +268,18 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
 async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const invoiceData = event.data.attributes;
   const customData = event.meta.custom_data || {};
+  const userId = customData.user_id || customData.userId || invoiceData.user_email;
 
   // Prepare payment data for Supabase
   const paymentData = {
     test_mode: invoiceData.test_mode,
     currency_rate: invoiceData.currency_rate,
     subtotal: invoiceData.subtotal,
-    discount_total: invoiceData.discount_total,
+    discount_total: invoiceData.discount_total || 0,
     tax: invoiceData.tax,
     total: invoiceData.total,
     subtotal_usd: invoiceData.subtotal_usd,
-    discount_total_usd: invoiceData.discount_total_usd,
+    discount_total_usd: invoiceData.discount_total_usd || 0,
     tax_usd: invoiceData.tax_usd,
     total_usd: invoiceData.total_usd,
     refunded: invoiceData.refunded,
@@ -287,7 +288,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     updated_at: invoiceData.updated_at,
     amount: invoiceData.total,
     paymentDate: invoiceData.created_at,
-    userId: customData.userId || invoiceData.user_email, // Fallback to email if userId is not provided
+    userId: userId,
     store_id: invoiceData.store_id,
     customer_id: invoiceData.customer_id,
     order_number: null,
@@ -303,7 +304,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     subtotal_formatted: invoiceData.subtotal_formatted,
     user_name: invoiceData.user_name,
     user_email: invoiceData.user_email,
-    discount_total_formatted: invoiceData.discount_total_formatted,
+    discount_total_formatted: invoiceData.discount_total_formatted || "$0.00",
     tax_name: null,
   };
 
@@ -317,23 +318,108 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     return errorResponse('Failed to insert payment', 500);
   }
 
-  // Update subscription renewal date if applicable
+  // Update subscription if applicable
   if (invoiceData.subscription_id) {
+    // Get current subscription data to update properly
+    const { data: subscriptionData, error: fetchError } = await supabaseClient
+      .from('Subscription')
+      .select('*')
+      .eq('id', invoiceData.subscription_id)
+      .single();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+      console.error('Error fetching subscription:', fetchError);
+      return errorResponse('Failed to fetch subscription', 500);
+    }
+
+    // Update subscription with new renewal date
+    const subscriptionUpdate = {
+      renews_at: calculateNextRenewalDate(invoiceData.created_at, subscriptionData?.interval || 'monthly'),
+      updated_at: new Date().toISOString(),
+      status: 'active',
+      status_formatted: 'Active',
+      card_brand: invoiceData.card_brand,
+      card_last_four: invoiceData.card_last_four,
+    };
+
     const { error: subscriptionError } = await supabaseClient
       .from('Subscription')
-      .update({
-        renews_at: invoiceData.created_at, // Update renewal date to the payment date
-        updated_at: new Date().toISOString(),
-      })
+      .update(subscriptionUpdate)
       .eq('id', invoiceData.subscription_id);
 
     if (subscriptionError) {
       console.error('Error updating subscription:', subscriptionError);
       return errorResponse('Failed to update subscription', 500);
     }
+
+    // Update or create user_usage record
+    const periodStart = new Date().toISOString();
+    const periodEnd = calculateNextRenewalDate(periodStart, subscriptionData?.interval || 'monthly');
+    
+    const usageData = {
+      user_id: userId,
+      plan_type: subscriptionData?.product_name || 'pro',
+      period_start: periodStart,
+      period_end: periodEnd,
+      submission_count: 0, // Reset for new billing period
+      subscription_points: calculateSubscriptionPoints(subscriptionData?.product_name || 'pro')
+    };
+
+    // Upsert to user_usage table
+    const { error: usageError } = await supabaseClient
+      .from('user_usage')
+      .upsert([usageData], { onConflict: 'user_id' });
+
+    if (usageError) {
+      console.error('Error updating user usage:', usageError);
+      return errorResponse('Failed to update user usage', 500);
+    }
   }
 
   return successResponse();
+}
+
+// Helper function to calculate next renewal date based on interval
+function calculateNextRenewalDate(currentDate: string, interval: string): string {
+  const date = new Date(currentDate);
+  
+  switch (interval.toLowerCase()) {
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1);
+      break;
+    case 'yearly':
+    case 'annual':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    case 'weekly':
+      date.setDate(date.getDate() + 7);
+      break;
+    default:
+      date.setMonth(date.getMonth() + 1); // Default to monthly
+  }
+  
+  return date.toISOString();
+}
+
+// Helper function to determine subscription points based on plan
+function calculateSubscriptionPoints(planName: string): number {
+  const planPoints = {
+    'pro': 100,
+    'premium': 250,
+    'enterprise': 500,
+    // Add other plan tiers as needed
+  };
+  
+  const normalizedPlanName = planName.toLowerCase();
+  
+  // Check if the plan name contains any of the keys
+  for (const [key, points] of Object.entries(planPoints)) {
+    if (normalizedPlanName.includes(key)) {
+      return points;
+    }
+  }
+  
+  return 50; // Default points for unknown plans
 }
 
 // Data Transformers

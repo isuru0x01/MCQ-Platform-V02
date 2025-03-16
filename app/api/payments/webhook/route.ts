@@ -157,26 +157,35 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
   const { attributes } = event.data;
   const customData = attributes.first_order_item?.custom_data || {};
 
+  // Transform payment data
   const paymentData = transformPaymentData(attributes, customData);
-  // Use upsert with onConflict for idempotency
+  
+  // Check if payment record already exists
+  const { data: existingPayment, error: checkError } = await supabaseClient
+    .from('Payment')
+    .select('identifier')
+    .eq('identifier', paymentData.identifier)
+    .maybeSingle();
+    
+  if (checkError) {
+    console.error('Error checking for existing payment:', checkError);
+    return errorResponse('Failed to check for existing payment', 500);
+  }
+  
+  // If payment already exists, return success (idempotency)
+  if (existingPayment) {
+    console.log('Payment already processed:', paymentData.identifier);
+    return successResponse();
+  }
+  
+  // Insert new payment record
   const { error: paymentError } = await supabaseClient
     .from('Payment')
-    .upsert([paymentData], { onConflict: 'identifier' });
+    .insert([paymentData]);
 
   if (paymentError) {
     console.error('Error inserting payment:', paymentError);
     return errorResponse('Failed to insert payment', 500);
-  }
-
-  const subscriptionUpdate = createSubscriptionUpdate(attributes, customData);
-  // Use upsert with onConflict for idempotency
-  const { error: userError } = await supabaseClient
-    .from('Subscription')
-    .upsert([subscriptionUpdate], { onConflict: 'userId' });
-
-  if (userError) {
-    console.error('Error updating subscription:', userError);
-    return errorResponse('Failed to update subscription', 500);
   }
 
   return successResponse();

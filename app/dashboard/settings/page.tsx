@@ -35,35 +35,47 @@ export default function Settings() {
   useEffect(() => {
     async function fetchSubscription() {
       if (user?.id) {
-        // First try to fetch by userId
-        const { data: dataById, error: errorById } = await supabaseClient
-          .from('Subscription')
-          .select()
-          .eq('userId', user.id)
-          .maybeSingle();
-
-        if (!errorById && dataById) {
-          setSubscription(dataById);
-          setLoading(false);
-          return;
-        }
-
-        // If not found by userId, try by email
-        if (user.emailAddresses?.[0]?.emailAddress) {
-          const { data: dataByEmail, error: errorByEmail } = await supabaseClient
+        try {
+          // First try to fetch by userId
+          const { data: dataById, error: errorById } = await supabaseClient
             .from('Subscription')
-            .select()
-            .eq('user_email', user.emailAddresses[0].emailAddress)
+            .select('*')  // Explicitly select all columns
+            .eq('userId', user.id)
             .maybeSingle();
-
-          if (!errorByEmail && dataByEmail) {
-            setSubscription(dataByEmail);
+          
+          console.log('Subscription query by userId:', user.id);
+          console.log('Subscription query result:', { data: dataById, error: errorById });
+  
+          if (!errorById && dataById) {
+            setSubscription(dataById);
+            setLoading(false);
+            return;
           }
+  
+          // If not found by userId, try by email
+          if (user.emailAddresses?.[0]?.emailAddress) {
+            const email = user.emailAddresses[0].emailAddress;
+            const { data: dataByEmail, error: errorByEmail } = await supabaseClient
+              .from('Subscription')
+              .select('*')  // Explicitly select all columns
+              .eq('user_email', email)
+              .maybeSingle();
+            
+            console.log('Subscription query by email:', email);
+            console.log('Subscription query result:', { data: dataByEmail, error: errorByEmail });
+  
+            if (!errorByEmail && dataByEmail) {
+              setSubscription(dataByEmail);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching subscription:', error);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     }
-
+  
     fetchSubscription();
   }, [user]);
 

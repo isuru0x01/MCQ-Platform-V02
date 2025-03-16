@@ -36,14 +36,16 @@ export default function Settings() {
     async function fetchSubscription() {
       if (user?.id) {
         try {
-          // First try to fetch by userId
+          // First try to fetch by userId - using proper query format
+          const userId = user.id.replace('user_', ''); // Remove 'user_' prefix if present
+          
           const { data: dataById, error: errorById } = await supabaseClient
             .from('Subscription')
-            .select('*')  // Explicitly select all columns
-            .eq('userId', user.id)
+            .select('*')
+            .eq('userId', userId) // Use the cleaned userId
             .maybeSingle();
           
-          console.log('Subscription query by userId:', user.id);
+          console.log('Subscription query by userId:', userId);
           console.log('Subscription query result:', { data: dataById, error: errorById });
   
           if (!errorById && dataById) {
@@ -57,7 +59,7 @@ export default function Settings() {
             const email = user.emailAddresses[0].emailAddress;
             const { data: dataByEmail, error: errorByEmail } = await supabaseClient
               .from('Subscription')
-              .select('*')  // Explicitly select all columns
+              .select('*')
               .eq('user_email', email)
               .maybeSingle();
             

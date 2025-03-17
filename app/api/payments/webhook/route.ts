@@ -428,6 +428,11 @@ function transformSubscriptionData(subData: any): SubscriptionData {
   const firstItem = subData.first_subscription_item;
   const customData = subData.custom_data || {};
 
+  // Ensure we have an ID
+  if (!subData.id) {
+    throw new Error('Missing subscription ID in data');
+  }
+
   // Determine interval from variant name if available
   let interval = 'monthly';
   if (subData.variant_name) {
@@ -439,7 +444,7 @@ function transformSubscriptionData(subData: any): SubscriptionData {
   }
 
   return {
-    id: subData.id,
+    id: subData.id, // This should now be guaranteed to exist
     userId: customData.user_id || customData.userId || subData.user_email,
     order_item_id: subData.order_item_id,
     product_id: subData.product_id,
@@ -464,8 +469,8 @@ function transformSubscriptionData(subData: any): SubscriptionData {
     interval: interval,
     user_name: subData.user_name,
     user_email: subData.user_email,
-    status: subData.status,
-    status_formatted: subData.status_formatted,
+    status: subData.status || 'active',
+    status_formatted: subData.status_formatted || 'Active',
     card_brand: subData.card_brand,
     card_last_four: subData.card_last_four,
     product_name: subData.product_name,
@@ -507,8 +512,13 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   }
   
   // Use upsert instead of select/insert for better idempotency
-  const subscriptionData = transformSubscriptionData(subData);
-  subscriptionData.userId = userId; // Add userId to the main subscription record
+  const subscriptionData = transformSubscriptionData({
+    ...subData,
+    id: event.data.id  // Ensure ID is passed from event.data.id
+  });
+  subscriptionData.userId = userId;
+  
+  console.log('Subscription data to be inserted:', subscriptionData); // Add logging
   
   // Upsert subscription data
   const { error: subscriptionError } = await supabaseClient

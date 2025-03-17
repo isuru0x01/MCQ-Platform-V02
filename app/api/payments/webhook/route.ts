@@ -347,13 +347,14 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     tax_name: invoiceData.tax_name || null,
   };
 
-  // Insert payment record into Supabase with idempotency check
-  const { error: paymentError } = await supabaseClient
+  // Try to insert first, and if it fails with a unique constraint violation, it's already there
+  const { error: insertError } = await supabaseClient
     .from('Payment')
-    .upsert([paymentData], { onConflict: 'identifier' });
+    .insert([paymentData]);
 
-  if (paymentError) {
-    console.error('Error inserting payment:', paymentError);
+  // If there's an error other than a unique constraint violation, log it
+  if (insertError && !insertError.message.includes('duplicate key value')) {
+    console.error('Error inserting payment:', insertError);
     return errorResponse('Failed to insert payment', 500);
   }
 
@@ -425,7 +426,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   return successResponse();
 }
 
-// Update the transform function to properly handle userId
+// Update the transform function to properly handle userId and remove non-existent fields
 function transformSubscriptionData(subData: any): SubscriptionData {
   const firstItem = subData.first_subscription_item;
   const customData = subData.custom_data || {};
@@ -448,7 +449,7 @@ function transformSubscriptionData(subData: any): SubscriptionData {
     variant_id: subData.variant_id,
     pause: subData.pause,
     cancelled: subData.cancelled,
-    trialEndsAt: subData.trial_ends_at,
+    trialEndsAt: subData.trial_ends_at, // Changed from trial_ends_at to trialEndsAt
     billing_anchor: subData.billing_anchor,
     renews_at: subData.renews_at,
     ends_at: subData.ends_at,
@@ -471,9 +472,7 @@ function transformSubscriptionData(subData: any): SubscriptionData {
     card_brand: subData.card_brand,
     card_last_four: subData.card_last_four,
     product_name: subData.product_name,
-    currentPeriodEnd: subData.renews_at,
-    subscriptionId: subData.id,
-    planId: subData.variant_id,
+    // Remove currentPeriodEnd, subscriptionId, and planId as they don't exist in the table
   };
 }
 

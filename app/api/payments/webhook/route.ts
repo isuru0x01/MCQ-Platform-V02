@@ -219,7 +219,7 @@ function transformPaymentData(orderData: any, customData: any): PaymentData {
   };
 }
 
-// Update handleSubscriptionCancelled to validate id before upsert
+// Update handleSubscriptionCancelled to validate id before upsert and remove non-existent fields
 async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
   const customData = event.meta.custom_data || {};
@@ -240,8 +240,8 @@ async function handleSubscriptionCancelled(event: LemonWebhookEvent) {
     ends_at: subData.ends_at,
     updated_at: subData.updated_at,
     renews_at: subData.renews_at,
-    canceledAt: subData.updated_at,
-    currentPeriodEnd: subData.ends_at,
+    // Remove currentPeriodEnd as it doesn't exist in the table
+    // Add canceledAt as a custom field if needed in your application logic
     userId: userId
   };
 

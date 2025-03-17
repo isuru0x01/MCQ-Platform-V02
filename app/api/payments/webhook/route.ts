@@ -151,10 +151,13 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
   // Transform payment data
   const paymentData = transformPaymentData(attributes, customData);
   
-  // Use upsert instead of select/insert for better idempotency
+  // Use upsert with a more specific conflict constraint
   const { error: paymentError } = await supabaseClient
     .from('Payment')
-    .upsert([paymentData], { onConflict: 'identifier' });
+    .upsert([paymentData], { 
+      onConflict: 'identifier',
+      ignoreDuplicates: true  // Add this to ignore duplicates
+    });
 
   if (paymentError) {
     console.error('Error upserting payment:', paymentError);
@@ -347,10 +350,13 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   // Try to insert first, and if it fails with a unique constraint violation, it's already there
   const { error: insertError } = await supabaseClient
     .from('Payment')
-    .insert([paymentData]);
+    .upsert([paymentData], { 
+      onConflict: 'identifier',
+      ignoreDuplicates: true  // Add this to ignore duplicates
+    });
 
   // If there's an error other than a unique constraint violation, log it
-  if (insertError && !insertError.message.includes('duplicate key value')) {
+  if (insertError) {
     console.error('Error inserting payment:', insertError);
     return errorResponse('Failed to insert payment', 500);
   }

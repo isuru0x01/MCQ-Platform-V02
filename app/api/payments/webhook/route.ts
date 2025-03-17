@@ -56,10 +56,7 @@ interface SubscriptionData {
   userId?: string;
   status: string;
   planId?: string;
-  currentPeriodEnd?: string;
-  trialEndsAt?: string | null;
-  canceledAt?: string | null;
-  subscriptionId?: string;
+  trial_ends_at?: string | null; // Changed from trialEndsAt to match database column name
   order_item_id?: number;
   product_id?: number;
   variant_id?: number;
@@ -449,7 +446,7 @@ function transformSubscriptionData(subData: any): SubscriptionData {
     variant_id: subData.variant_id,
     pause: subData.pause,
     cancelled: subData.cancelled,
-    trialEndsAt: subData.trial_ends_at, // Changed from trial_ends_at to trialEndsAt
+    trial_ends_at: subData.trial_ends_at, // Changed from trialEndsAt to match database column name
     billing_anchor: subData.billing_anchor,
     renews_at: subData.renews_at,
     ends_at: subData.ends_at,

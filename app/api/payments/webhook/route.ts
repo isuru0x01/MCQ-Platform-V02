@@ -147,21 +147,30 @@ async function verifyWebhook(req: NextRequest) {
 async function handleOrderCreated(event: LemonWebhookEvent) {
   const { attributes } = event.data;
   const customData = attributes.first_order_item?.custom_data || {};
-
+  
   // Transform payment data
   const paymentData = transformPaymentData(attributes, customData);
   
-  // Use upsert with a more specific conflict constraint
+  // Check if a payment with the same timestamp and user already exists
+  const { data: existingPayments } = await supabaseClient
+    .from('Payment')
+    .select('id')
+    .eq('created_at', attributes.created_at)
+    .eq('userId', paymentData.userId);
+
+  if (existingPayments && existingPayments.length > 0) {
+    console.log('Payment already exists for this user and timestamp:', paymentData.userId, attributes.created_at);
+    return successResponse();
+  }
+  
+  // Insert the payment
   const { error: paymentError } = await supabaseClient
     .from('Payment')
-    .upsert([paymentData], { 
-      onConflict: 'identifier',
-      ignoreDuplicates: true  // Add this to ignore duplicates
-    });
+    .insert([paymentData]);
 
   if (paymentError) {
-    console.error('Error upserting payment:', paymentError);
-    return errorResponse('Failed to upsert payment', 500);
+    console.error('Error inserting payment:', paymentError);
+    return errorResponse('Failed to insert payment', 500);
   }
 
   console.log('Payment processed:', paymentData.identifier);
@@ -308,60 +317,68 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     return errorResponse('Invalid payment data: missing userId', 400);
   }
 
-  // Prepare payment data for Supabase with more unique identifier
-  const paymentData = {
-    test_mode: invoiceData.test_mode,
-    currency_rate: invoiceData.currency_rate,
-    subtotal: invoiceData.subtotal,
-    discount_total: invoiceData.discount_total || 0,
-    tax: invoiceData.tax,
-    total: invoiceData.total,
-    subtotal_usd: invoiceData.subtotal_usd,
-    discount_total_usd: invoiceData.discount_total_usd || 0,
-    tax_usd: invoiceData.tax_usd,
-    total_usd: invoiceData.total_usd,
-    refunded: invoiceData.refunded,
-    refunded_at: invoiceData.refunded_at,
-    created_at: invoiceData.created_at,
-    updated_at: invoiceData.updated_at,
-    amount: invoiceData.total,
-    paymentDate: invoiceData.created_at,
-    userId: userId,
-    store_id: invoiceData.store_id,
-    customer_id: invoiceData.customer_id,
-    order_number: invoiceData.order_number || null,
-    stripeId: null,
-    email: invoiceData.user_email,
-    tax_rate: "0",
-    currency: invoiceData.currency,
-    status: invoiceData.status,
-    status_formatted: invoiceData.status_formatted,
-    tax_formatted: invoiceData.tax_formatted,
-    total_formatted: invoiceData.total_formatted,
-    // More unique identifier that includes timestamp to prevent collisions
-    identifier: `${event.data.id}_${invoiceData.created_at}`,
-    subtotal_formatted: invoiceData.subtotal_formatted,
-    user_name: invoiceData.user_name,
-    user_email: invoiceData.user_email,
-    discount_total_formatted: invoiceData.discount_total_formatted || "$0.00",
-    tax_name: invoiceData.tax_name || null,
-  };
-
-  // Try to insert first, and if it fails with a unique constraint violation, it's already there
-  const { error: insertError } = await supabaseClient
+  // Check if a payment with the same timestamp and user already exists
+  const { data: existingPayments } = await supabaseClient
     .from('Payment')
-    .upsert([paymentData], { 
-      onConflict: 'identifier',
-      ignoreDuplicates: true  // Add this to ignore duplicates
-    });
+    .select('id')
+    .eq('created_at', invoiceData.created_at)
+    .eq('userId', userId);
 
-  // If there's an error other than a unique constraint violation, log it
-  if (insertError) {
-    console.error('Error inserting payment:', insertError);
-    return errorResponse('Failed to insert payment', 500);
+  if (existingPayments && existingPayments.length > 0) {
+    console.log('Payment already exists for this user and timestamp:', userId, invoiceData.created_at);
+    // Skip payment insertion but continue with subscription update
+  } else {
+    // Prepare payment data for Supabase with more unique identifier
+    const paymentData = {
+      test_mode: invoiceData.test_mode,
+      currency_rate: invoiceData.currency_rate,
+      subtotal: invoiceData.subtotal,
+      discount_total: invoiceData.discount_total || 0,
+      tax: invoiceData.tax,
+      total: invoiceData.total,
+      subtotal_usd: invoiceData.subtotal_usd,
+      discount_total_usd: invoiceData.discount_total_usd || 0,
+      tax_usd: invoiceData.tax_usd,
+      total_usd: invoiceData.total_usd,
+      refunded: invoiceData.refunded,
+      refunded_at: invoiceData.refunded_at,
+      created_at: invoiceData.created_at,
+      updated_at: invoiceData.updated_at,
+      amount: invoiceData.total,
+      paymentDate: invoiceData.created_at,
+      userId: userId,
+      store_id: invoiceData.store_id,
+      customer_id: invoiceData.customer_id,
+      order_number: invoiceData.order_number || null,
+      stripeId: null,
+      email: invoiceData.user_email,
+      tax_rate: "0",
+      currency: invoiceData.currency,
+      status: invoiceData.status,
+      status_formatted: invoiceData.status_formatted,
+      tax_formatted: invoiceData.tax_formatted,
+      total_formatted: invoiceData.total_formatted,
+      // More unique identifier that includes timestamp to prevent collisions
+      identifier: `${event.data.id}_${invoiceData.created_at}`,
+      subtotal_formatted: invoiceData.subtotal_formatted,
+      user_name: invoiceData.user_name,
+      user_email: invoiceData.user_email,
+      discount_total_formatted: invoiceData.discount_total_formatted || "$0.00",
+      tax_name: invoiceData.tax_name || null,
+    };
+
+    // Insert the payment
+    const { error: insertError } = await supabaseClient
+      .from('Payment')
+      .insert([paymentData]);
+
+    if (insertError) {
+      console.error('Error inserting payment:', insertError);
+      return errorResponse('Failed to insert payment', 500);
+    }
   }
 
-  // Update subscription if applicable
+  // Continue with subscription update if applicable
   if (invoiceData.subscription_id) {
     // Get minimal subscription data needed for updates
     const { data: subscriptionData, error: fetchError } = await supabaseClient

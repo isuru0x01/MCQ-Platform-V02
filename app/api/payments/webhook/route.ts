@@ -307,6 +307,7 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
 }
 
 // Optimize handleSubscriptionPaymentSuccess to reduce database queries
+// In handleSubscriptionPaymentSuccess function
 async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const invoiceData = event.data.attributes;
   const customData = event.meta.custom_data || {};
@@ -429,12 +430,32 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
       submission_count: 0, // Reset for new billing period
       subscription_points: calculateSubscriptionPoints(subscriptionData?.product_name || 'pro')
     };
-
-    // Upsert to user_usage table with composite key constraint
-    const { error: usageError } = await supabaseClient
+    
+    // First check if a record already exists
+    const { data: existingUsage } = await supabaseClient
       .from('user_usage')
-      .upsert([usageData], { onConflict: 'user_id, period_start' });
-
+      .select('id')
+      .eq('user_id', userId)
+      .eq('period_start', periodStart)
+      .maybeSingle();
+    
+    let usageError;
+    
+    if (existingUsage) {
+      // Update existing record
+      const { error } = await supabaseClient
+        .from('user_usage')
+        .update(usageData)
+        .eq('id', existingUsage.id);
+      usageError = error;
+    } else {
+      // Insert new record
+      const { error } = await supabaseClient
+        .from('user_usage')
+        .insert([usageData]);
+      usageError = error;
+    }
+    
     if (usageError) {
       console.error('Error creating user usage record:', usageError);
       return errorResponse('Failed to create user usage record', 500);

@@ -428,7 +428,7 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
       period_start: periodStart,
       period_end: periodEnd,
       submission_count: 0, // Reset for new billing period
-      subscription_points: calculateSubscriptionPoints(subscriptionData?.product_name || 'pro')
+      subscription_points: calculateSubscriptionPoints(subscriptionData?.product_name || 'Pro Monthly')
     };
     
     // First check if a record already exists
@@ -584,7 +584,7 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
     period_start: periodStart,
     period_end: periodEnd,
     submission_count: 0, // Initialize for new subscription
-    subscription_points: calculateSubscriptionPoints(subscriptionData.product_name || 'pro')
+    subscription_points: calculateSubscriptionPoints(subscriptionData.product_name || 'Pro Monthly')
   };
 
   // Upsert to user_usage table with composite key constraint
@@ -625,14 +625,20 @@ function calculateNextRenewalDate(startDate: string, interval: string): string {
   return date.toISOString();
 }
 
+// Helper Functions
+// ... existing code ...
+
 function calculateSubscriptionPoints(planType: string): number {
   switch (planType.toLowerCase()) {
     case 'pro':
-      return 30;
+    case 'Pro Monthly':
+      return 100;
+    case 'Pro Yearly':
+      return 1500; // Changed from 30 to 100 for Pro plans
     case 'premium':
       return 100;
     default:
-      return 10;
+      return 30;
   }
 }
 

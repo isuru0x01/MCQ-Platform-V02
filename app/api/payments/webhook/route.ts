@@ -422,13 +422,17 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     const periodStart = new Date().toISOString();
     const periodEnd = calculateNextRenewalDate(periodStart, interval);
     
+    // Extract and log the product name for debugging
+    const productName = subscriptionData?.product_name || 'pro';
+    console.log('Payment success product name:', productName);
+    
     const usageData = {
       user_id: userId,
-      plan_type: subscriptionData?.product_name || 'pro',
+      plan_type: productName, // Use the exact product name from the subscription
       period_start: periodStart,
       period_end: periodEnd,
       submission_count: 0, // Reset for new billing period
-      subscription_points: calculateSubscriptionPoints(subscriptionData?.product_name || 'Pro Monthly')
+      subscription_points: calculateSubscriptionPoints(productName)
     };
     
     // First check if a record already exists
@@ -538,7 +542,7 @@ async function handleLemonEvent(event: LemonWebhookEvent) {
   return handler ? handler(event) : null;
 }
 
-// Add the missing handleSubscriptionCreated function
+// In handleSubscriptionCreated function
 async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const subData = event.data.attributes;
   const customData = event.meta.custom_data || {};
@@ -578,13 +582,17 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
   const periodStart = new Date().toISOString();
   const periodEnd = calculateNextRenewalDate(periodStart, subscriptionData.interval || 'monthly');
   
+  // Extract and log the product name for debugging
+  const productName = subscriptionData.product_name || 'pro';
+  console.log('Subscription product name:', productName, 'Variant name:', subscriptionData.variant_name);
+  
   const usageData = {
     user_id: userId,
-    plan_type: subscriptionData.product_name || 'pro',
+    plan_type: productName, // Use the exact product name from the subscription
     period_start: periodStart,
     period_end: periodEnd,
     submission_count: 0, // Initialize for new subscription
-    subscription_points: calculateSubscriptionPoints(subscriptionData.product_name || 'Pro Monthly')
+    subscription_points: calculateSubscriptionPoints(productName)
   };
 
   // Upsert to user_usage table with composite key constraint
@@ -626,19 +634,25 @@ function calculateNextRenewalDate(startDate: string, interval: string): string {
 }
 
 // Helper Functions
-// ... existing code ...
-
+// Fix the calculateSubscriptionPoints function to properly handle case variations
 function calculateSubscriptionPoints(planType: string): number {
-  switch (planType.toLowerCase()) {
-    case 'pro':
-    case 'Pro Monthly':
-      return 100;
-    case 'Pro Yearly':
-      return 1500; // Changed from 30 to 100 for Pro plans
-    case 'premium':
-      return 100;
-    default:
-      return 30;
+  // Normalize the plan type by converting to lowercase and trimming
+  const normalizedPlanType = (planType || '').toLowerCase().trim();
+  
+  // Log the plan type for debugging
+  console.log('Calculating points for plan type:', planType, 'normalized:', normalizedPlanType);
+  
+  if (normalizedPlanType.includes('pro')) {
+    if (normalizedPlanType.includes('yearly')) {
+      return 1500; // Pro Yearly plan
+    }
+    return 100; // Pro Monthly or just Pro
+  } else if (normalizedPlanType.includes('premium')) {
+    return 100; // Premium plan
+  } else {
+    // Default for free or unknown plans
+    console.log('Unknown plan type, defaulting to 30 points:', planType);
+    return 30;
   }
 }
 

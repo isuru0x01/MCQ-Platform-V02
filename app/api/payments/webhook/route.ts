@@ -307,7 +307,6 @@ async function handleSubscriptionPaused(event: LemonWebhookEvent) {
 }
 
 // Optimize handleSubscriptionPaymentSuccess to reduce database queries
-// In handleSubscriptionPaymentSuccess function
 async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
   const invoiceData = event.data.attributes;
   const customData = event.meta.custom_data || {};
@@ -318,64 +317,69 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     return errorResponse('Invalid payment data: missing userId', 400);
   }
 
-  // Check if a payment with the same order number already exists
-  // This is more reliable than checking timestamp and userId
-  const { data: existingPayments } = await supabaseClient
-    .from('Payment')
-    .select('id')
-    .eq('order_number', invoiceData.order_number);
-
-  if (existingPayments && existingPayments.length > 0) {
-    console.log('Payment already exists for order number:', invoiceData.order_number);
-    // Skip payment insertion but continue with subscription update
+  // Skip payment insertion if order_number is missing
+  if (!invoiceData.order_number) {
+    console.log('Skipping payment insertion due to missing order_number');
   } else {
-    // Prepare payment data for Supabase with more unique identifier
-    const paymentData = {
-      test_mode: invoiceData.test_mode,
-      currency_rate: invoiceData.currency_rate,
-      subtotal: invoiceData.subtotal,
-      discount_total: invoiceData.discount_total || 0,
-      tax: invoiceData.tax,
-      total: invoiceData.total,
-      subtotal_usd: invoiceData.subtotal_usd,
-      discount_total_usd: invoiceData.discount_total_usd || 0,
-      tax_usd: invoiceData.tax_usd,
-      total_usd: invoiceData.total_usd,
-      refunded: invoiceData.refunded,
-      refunded_at: invoiceData.refunded_at,
-      created_at: invoiceData.created_at,
-      updated_at: invoiceData.updated_at,
-      amount: invoiceData.total,
-      paymentDate: invoiceData.created_at,
-      userId: userId,
-      store_id: invoiceData.store_id,
-      customer_id: invoiceData.customer_id,
-      order_number: invoiceData.order_number || null,
-      stripeId: null,
-      email: invoiceData.user_email,
-      tax_rate: "0",
-      currency: invoiceData.currency,
-      status: invoiceData.status,
-      status_formatted: invoiceData.status_formatted,
-      tax_formatted: invoiceData.tax_formatted,
-      total_formatted: invoiceData.total_formatted,
-      // More unique identifier that includes timestamp to prevent collisions
-      identifier: `${event.data.id}_${invoiceData.created_at}`,
-      subtotal_formatted: invoiceData.subtotal_formatted,
-      user_name: invoiceData.user_name,
-      user_email: invoiceData.user_email,
-      discount_total_formatted: invoiceData.discount_total_formatted || "$0.00",
-      tax_name: invoiceData.tax_name || null,
-    };
-
-    // Insert the payment
-    const { error: insertError } = await supabaseClient
+    // Check if a payment with the same order number already exists
+    const { data: existingPayments } = await supabaseClient
       .from('Payment')
-      .insert([paymentData]);
+      .select('id')
+      .eq('order_number', invoiceData.order_number);
 
-    if (insertError) {
-      console.error('Error inserting payment:', insertError);
-      return errorResponse('Failed to insert payment', 500);
+    if (existingPayments && existingPayments.length > 0) {
+      console.log('Payment already exists for order number:', invoiceData.order_number);
+    } else {
+      // Prepare payment data for Supabase with more unique identifier
+      const paymentData = {
+        test_mode: invoiceData.test_mode,
+        currency_rate: invoiceData.currency_rate,
+        subtotal: invoiceData.subtotal,
+        discount_total: invoiceData.discount_total || 0,
+        tax: invoiceData.tax,
+        total: invoiceData.total,
+        subtotal_usd: invoiceData.subtotal_usd,
+        discount_total_usd: invoiceData.discount_total_usd || 0,
+        tax_usd: invoiceData.tax_usd,
+        total_usd: invoiceData.total_usd,
+        refunded: invoiceData.refunded,
+        refunded_at: invoiceData.refunded_at,
+        created_at: invoiceData.created_at,
+        updated_at: invoiceData.updated_at,
+        amount: invoiceData.total,
+        paymentDate: invoiceData.created_at,
+        userId: userId,
+        store_id: invoiceData.store_id,
+        customer_id: invoiceData.customer_id,
+        order_number: invoiceData.order_number,
+        stripeId: null,
+        email: invoiceData.user_email,
+        tax_rate: "0",
+        currency: invoiceData.currency,
+        status: invoiceData.status,
+        status_formatted: invoiceData.status_formatted,
+        tax_formatted: invoiceData.tax_formatted,
+        total_formatted: invoiceData.total_formatted,
+        // More unique identifier that includes timestamp to prevent collisions
+        identifier: `${event.data.id}_${invoiceData.created_at}`,
+        subtotal_formatted: invoiceData.subtotal_formatted,
+        user_name: invoiceData.user_name,
+        user_email: invoiceData.user_email,
+        discount_total_formatted: invoiceData.discount_total_formatted || "$0.00",
+        tax_name: invoiceData.tax_name || null,
+      };
+
+      // Insert the payment
+      const { error: insertError } = await supabaseClient
+        .from('Payment')
+        .insert([paymentData]);
+
+      if (insertError) {
+        console.error('Error inserting payment:', insertError);
+        return errorResponse('Failed to insert payment', 500);
+      }
+      
+      console.log('Payment inserted successfully for order number:', invoiceData.order_number);
     }
   }
 

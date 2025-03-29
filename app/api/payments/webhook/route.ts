@@ -151,15 +151,15 @@ async function handleOrderCreated(event: LemonWebhookEvent) {
   // Transform payment data
   const paymentData = transformPaymentData(attributes, customData);
   
-  // Check if a payment with the same timestamp and user already exists
+  // Check if a payment with the same order number already exists
+  // This is more reliable than checking timestamp and userId
   const { data: existingPayments } = await supabaseClient
     .from('Payment')
     .select('id')
-    .eq('created_at', attributes.created_at)
-    .eq('userId', paymentData.userId);
+    .eq('order_number', attributes.order_number);
 
   if (existingPayments && existingPayments.length > 0) {
-    console.log('Payment already exists for this user and timestamp:', paymentData.userId, attributes.created_at);
+    console.log('Payment already exists for order number:', attributes.order_number);
     return successResponse();
   }
   
@@ -318,15 +318,15 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
     return errorResponse('Invalid payment data: missing userId', 400);
   }
 
-  // Check if a payment with the same timestamp and user already exists
+  // Check if a payment with the same order number already exists
+  // This is more reliable than checking timestamp and userId
   const { data: existingPayments } = await supabaseClient
     .from('Payment')
     .select('id')
-    .eq('created_at', invoiceData.created_at)
-    .eq('userId', userId);
+    .eq('order_number', invoiceData.order_number);
 
   if (existingPayments && existingPayments.length > 0) {
-    console.log('Payment already exists for this user and timestamp:', userId, invoiceData.created_at);
+    console.log('Payment already exists for order number:', invoiceData.order_number);
     // Skip payment insertion but continue with subscription update
   } else {
     // Prepare payment data for Supabase with more unique identifier

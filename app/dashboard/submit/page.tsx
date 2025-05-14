@@ -112,7 +112,12 @@ export default function SubmitNewURL() {
   const handleFileUpload = async (file: File) => {
     try {
       setLoading(true);
-      console.log("Starting file upload, user ID:", user?.id);
+      
+      // Initial feedback
+      toast({
+        title: "Upload Started",
+        description: `Processing ${file.name}...`,
+      });
 
       if (!user?.id) {
         toast({
@@ -135,17 +140,20 @@ export default function SubmitNewURL() {
         return;
       }
 
+      // File upload feedback
+      toast({
+        title: "Extracting Content",
+        description: "Reading and processing file contents...",
+      });
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', user.id);
 
-      console.log("Sending request to /api/upload");
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
-
-      console.log("Upload response status:", response.status);
       
       if (!response.ok) {
         const error = await response.json();
@@ -153,7 +161,12 @@ export default function SubmitNewURL() {
       }
 
       const data = await response.json();
-      console.log("Upload response data:", data);
+
+      // MCQ Generation feedback
+      toast({
+        title: "Generating Questions",
+        description: "Creating MCQs from content...",
+      });
 
       // Create resource
       const { data: resource, error: resourceError } = await supabaseClient
@@ -205,17 +218,26 @@ export default function SubmitNewURL() {
 
       if (mcqError) throw mcqError;
 
+      // Tutorial Generation feedback
+      toast({
+        title: "Creating Tutorial",
+        description: "Generating comprehensive tutorial...",
+      });
+
       const tutorial = await generateTutorial(data.content);
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
         .update({ tutorial })
         .eq('id', resource.id);
 
-      if (tutorialError) throw tutorialError;
+      if (tutorialError) {
+        console.error("Tutorial Error:", tutorialError);
+        throw tutorialError;
+      }
 
       toast({
         title: "Success!",
-        description: "File uploaded and processed successfully.",
+        description: "File processed successfully. Redirecting to quiz...",
       });
 
       // After successful submission, decrement points for pro users

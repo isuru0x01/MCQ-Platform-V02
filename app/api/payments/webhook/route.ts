@@ -599,10 +599,10 @@ async function handleSubscriptionCreated(event: LemonWebhookEvent) {
     subscription_points: calculateSubscriptionPoints(productName)
   };
 
-  // Upsert to user_usage table with composite key constraint
+  // Upsert to user_usage table with user_id as the conflict key
   const { error: usageError } = await supabaseClient
     .from('user_usage')
-    .upsert([usageData], { onConflict: 'user_id, period_start' });
+    .upsert([usageData], { onConflict: 'user_id' });
 
   if (usageError) {
     console.error('Error creating user usage record:', usageError);

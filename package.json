@@ -76,6 +76,7 @@
     "office-text-extractor": "^3.0.3",
     "openai": "^4.77.0",
     "pdf-parse": "^1.1.1",
+    "pdf.js-extract": "^0.2.1",
     "pptx-compose": "^1.0.0",
     "pptx-parser": "^1.1.7-beta.9",
     "prisma": "^5.9.1",

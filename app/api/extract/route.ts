@@ -15,6 +15,17 @@ export async function POST(req: Request) {
     let imageUrl: string | null = null;
     let title: string;
 
+    // Common headers to mimic a browser request
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'Referer': 'https://www.google.com/',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1'
+    };
+
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       // Existing YouTube extraction logic
       const videoId = url.match(
@@ -29,14 +40,15 @@ export async function POST(req: Request) {
       }
 
       const videoResponse = await axios.get(
-        `https://www.youtube.com/watch?v=${videoId}`
+        `https://www.youtube.com/watch?v=${videoId}`,
+        { headers }
       );
       const $ = cheerioLoad(videoResponse.data);
       title = $("title").text().replace("- YouTube", "").trim() || "YouTube Video";
 
       imageUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       try {
-        const imageRes = await axios.get(imageUrl);
+        const imageRes = await axios.get(imageUrl, { headers });
         if (imageRes.status !== 200) {
           imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
         }
@@ -57,29 +69,53 @@ export async function POST(req: Request) {
         );
       }
     } else {
-      // Existing article extraction logic
-      const response = await axios.get(url);
-      const $ = cheerioLoad(response.data);
+      // Enhanced article extraction logic with proper headers
+      try {
+        const response = await axios.get(url, { 
+          headers,
+          timeout: 10000, // 10 second timeout
+          maxRedirects: 5
+        });
+        
+        const $ = cheerioLoad(response.data);
 
-      title =
-        $('meta[property="og:title"]').attr("content") ||
-        $("title").text() ||
-        "Article";
+        title =
+          $('meta[property="og:title"]').attr("content") ||
+          $("title").text() ||
+          "Article";
 
-      const possibleImages = [
-        $('meta[property="og:image"]').attr("content"),
-        $('meta[name="twitter:image"]').attr("content"),
-        $("article img").first().attr("src"),
-        $(".post-content img").first().attr("src"),
-        $("img").first().attr("src"),
-      ].filter(Boolean);
-      imageUrl = possibleImages[0] || null;
+        const possibleImages = [
+          $('meta[property="og:image"]').attr("content"),
+          $('meta[name="twitter:image"]').attr("content"),
+          $("article img").first().attr("src"),
+          $(".post-content img").first().attr("src"),
+          $("img").first().attr("src"),
+        ].filter(Boolean);
+        imageUrl = possibleImages[0] || null;
 
-      content =
-        $("article, main, .content, .article-content, .post-content")
-          .first()
-          .text()
-          .trim() || $("body").text().trim();
+        // Fix relative image URLs
+        if (imageUrl && !imageUrl.startsWith('http')) {
+          const urlObj = new URL(url);
+          imageUrl = imageUrl.startsWith('/') 
+            ? `${urlObj.protocol}//${urlObj.host}${imageUrl}`
+            : `${urlObj.protocol}//${urlObj.host}/${imageUrl}`;
+        }
+
+        content =
+          $("article, main, .content, .article-content, .post-content")
+            .first()
+            .text()
+            .trim() || $("body").text().trim();
+      } catch (error) {
+        console.error("Error fetching article:", error);
+        return NextResponse.json(
+          { 
+            error: "Failed to fetch article content. The website may be blocking our requests.",
+            details: error instanceof Error ? error.message : "Unknown error"
+          },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({
@@ -96,9 +132,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

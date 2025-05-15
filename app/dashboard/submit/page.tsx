@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -21,6 +21,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,24 +29,15 @@ import { checkUserLimits, decrementProPoints } from "@/app/actions/checkUserLimi
 
 export const maxDuration = 60;
 
-const FormSchema = z.object({
-  url: z.preprocess(
-    (val) => val === "" ? undefined : val,
-    z.string().url("Please enter a valid URL").optional()
-  ),
+// Define separate schemas
+const UrlFormSchema = z.object({
+  url: z.string().url("Please enter a valid URL"),
+});
+
+const TextFormSchema = z.object({
   text: z.string()
     .min(100, "Text must be at least 100 characters long")
-    .max(50000, "Text must not exceed 50,000 characters")
-    .optional(),
-}).superRefine((data, ctx) => {
-  // At least one field must be filled
-  if (!data.url && !data.text) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Either URL or text must be provided",
-      path: ["text"],
-    });
-  }
+    .max(50000, "Text must not exceed 50,000 characters"),
 });
 
 export default function SubmitNewURL() {
@@ -61,19 +53,19 @@ export default function SubmitNewURL() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Create separate form instances
-  const websiteForm = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: { url: "", text: "" },
+  const websiteForm = useForm<z.infer<typeof UrlFormSchema>>({
+    resolver: zodResolver(UrlFormSchema),
+    defaultValues: { url: "" },
   });
 
-  const youtubeForm = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: { url: "", text: "" },
+  const youtubeForm = useForm<z.infer<typeof UrlFormSchema>>({
+    resolver: zodResolver(UrlFormSchema),
+    defaultValues: { url: "" },
   });
 
-  const textForm = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: { url: "", text: "" },
+  const textForm = useForm<z.infer<typeof TextFormSchema>>({
+    resolver: zodResolver(TextFormSchema),
+    defaultValues: { text: "" },
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -259,50 +251,44 @@ export default function SubmitNewURL() {
     }
   };
 
-  async function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log("Submit started with data:", data); // Debug log
-    
+  async function onSubmit(data: z.infer<typeof UrlFormSchema>) {
+    console.log("[onSubmit] Function started with data:", data); // Log function start
+
+    // No need to check !data.url here as the schema enforces it
+    // The zodResolver will prevent submission if the URL is invalid
+
     try {
-      if (!data.url) {
-        console.log("No URL provided"); // Debug log
-        toast({
-          title: "Error",
-          description: "Please enter a URL",
-          variant: "destructive",
-        });
-        return;
-      }
+      setLoading(true);
+      console.log("[onSubmit] Loading state set to true");
 
-      setLoading(true); // Set loading state immediately
-      console.log("Loading state set to true"); // Debug log
-
-      const { url } = data;
-      console.log("Processing URL:", url);
-
-      // Add debug toast
-      toast({
-        title: "Processing",
-        description: `Processing URL: ${url}`,
-      });
+      const { url } = data; // Directly destructure url
+      console.log("[onSubmit] Processing URL:", url);
 
       if (!user) {
+        console.log("[onSubmit] User not authenticated. Exiting."); // Log auth failure
         toast({
           title: "Authentication Error",
           description: "Please log in to submit content.",
           variant: "destructive",
         });
+        setLoading(false); // Ensure loading is reset if we exit early
         return;
       }
+      console.log("[onSubmit] User authenticated:", user.id); // Log auth success
 
       // Check user limits
+      console.log("[onSubmit] Checking user limits for:", user.emailAddresses[0].emailAddress); // Log limit check start
       const limitCheck = await checkUserLimits(user.emailAddresses[0].emailAddress);
+      console.log("[onSubmit] Limit check result:", limitCheck); // Log limit check result
       
       if (!limitCheck.canSubmit) {
+        console.log("[onSubmit] Submission limit reached. Exiting."); // Log limit check failure
         toast({
           title: "Submission Limit Reached",
           description: limitCheck.message,
           variant: "destructive",
         });
+        setLoading(false); // Ensure loading is reset
         return;
       }
 
@@ -310,6 +296,7 @@ export default function SubmitNewURL() {
         title: "Processing",
         description: "Extracting content from URL...",
       });
+      console.log("[onSubmit] Starting content extraction fetch for:", url); // Log fetch start
 
       // Step 1: Extract content from the URL
       const extractResponse = await fetch('/api/extract', {
@@ -320,20 +307,31 @@ export default function SubmitNewURL() {
         body: JSON.stringify({ url }),
       });
 
+      console.log("[onSubmit] Extract API response status:", extractResponse.status); // Log API response status
+
       if (!extractResponse.ok) {
-        const error = await extractResponse.json();
-        throw new Error(error.error || 'Failed to extract content');
+        const errorText = await extractResponse.text();
+        console.error("[onSubmit] Extract API error response text:", errorText); // Log raw error text
+        let errorJson;
+        try {
+          errorJson = JSON.parse(errorText);
+        } catch (e) {
+          console.error("[onSubmit] Failed to parse error response as JSON");
+          errorJson = { error: 'Failed to extract content and received non-JSON error response' };
+        }
+        throw new Error(errorJson.error || 'Failed to extract content');
       }
 
       const { content, imageUrl, title } = await extractResponse.json();
-      console.log("Content extracted:", content.substring(0, 100));
-      console.log("Image URL:", imageUrl);
-      console.log("Title:", title);
+      console.log("[onSubmit] Content extracted successfully. Title:", title, "Image URL:", imageUrl); // Log extraction success
+      // console.log("[onSubmit] Extracted content snippet:", content?.substring(0, 200)); // Optional: Log content snippet
 
-      // Step 2: Determine the type of content (YouTube or Article)
+      // Step 2: Determine the type of content
       const type = url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "article";
+      console.log("[onSubmit] Determined resource type:", type); // Log resource type
 
       // Step 3: Save the resource to the database
+      console.log("[onSubmit] Inserting resource into database..."); // Log DB insert start
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([{
@@ -348,21 +346,22 @@ export default function SubmitNewURL() {
         .single();
 
       if (resourceError) {
-        console.error("Resource Error:", resourceError);
+        console.error("[onSubmit] Supabase resource insert error:", resourceError); // Log DB error
         throw resourceError;
       }
-
-      console.log("Resource ID:", resource.id);
+      console.log("[onSubmit] Resource inserted successfully. ID:", resource.id); // Log DB insert success
 
       // Step 4: Generate MCQs
       toast({
         title: "Generating Questions",
         description: "Using AI to create MCQs...",
       });
-
+      console.log("[onSubmit] Generating MCQs..."); // Log MCQ generation start
       const mcqs = await generateMCQs(content);
+      console.log(`[onSubmit] Generated ${mcqs.length} MCQs.`); // Log MCQ generation end
 
       // Step 5: Create a quiz entry in the database
+      console.log("[onSubmit] Inserting quiz into database..."); // Log quiz insert start
       const { error: quizError, data: quizData } = await supabaseClient
         .from("Quiz")
         .insert([{
@@ -373,14 +372,13 @@ export default function SubmitNewURL() {
         .single();
 
       if (quizError) {
-        console.error("Quiz Error:", quizError);
+        console.error("[onSubmit] Supabase quiz insert error:", quizError); // Log quiz insert error
         throw quizError;
       }
-
       const quizId = quizData.id;
-      console.log("Quiz ID:", quizId);
+      console.log("[onSubmit] Quiz inserted successfully. ID:", quizId); // Log quiz insert success
 
-      // Step 6: Transform MCQs to match database schema and insert them
+      // Step 6: Transform MCQs and insert them
       const mcqData = mcqs.map((mcq) => ({
         quizId: quizId,
         question: mcq.question,
@@ -388,49 +386,58 @@ export default function SubmitNewURL() {
         optionB: mcq.options[1],
         optionC: mcq.options[2],
         optionD: mcq.options[3],
-        correctOption: mcq.options.indexOf(mcq.correct_answer) + 1, // Convert to 1-based index
+        correctOption: mcq.options.indexOf(mcq.correct_answer) + 1,
       }));
-
+      console.log("[onSubmit] Inserting MCQs into database..."); // Log MCQ insert start
       const { error: mcqError } = await supabaseClient
         .from("MCQ")
         .insert(mcqData);
 
-      if (mcqError) throw mcqError;
+      if (mcqError) {
+        console.error("[onSubmit] Supabase MCQ insert error:", mcqError); // Log MCQ insert error
+        throw mcqError;
+      }
+      console.log("[onSubmit] MCQs inserted successfully."); // Log MCQ insert success
 
-      // New Step: Generate and store tutorial
+      // Step 7: Generate and store tutorial
       toast({
         title: "Generating Tutorial",
         description: "Creating a comprehensive tutorial...",
       });
-
+      console.log("[onSubmit] Generating tutorial..."); // Log tutorial generation start
       const tutorial = await generateTutorial(content);
+      console.log("[onSubmit] Tutorial generated. Updating resource..."); // Log tutorial update start
 
-      // Update the resource with the tutorial
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
         .update({ tutorial: tutorial })
         .eq('id', resource.id);
 
       if (tutorialError) {
-        console.error("Tutorial Error:", tutorialError);
+        console.error("[onSubmit] Supabase tutorial update error:", tutorialError); // Log tutorial update error
         throw tutorialError;
       }
+      console.log("[onSubmit] Tutorial updated successfully."); // Log tutorial update success
 
       // Reset forms and close dialogs
+      console.log("[onSubmit] Resetting forms and closing dialogs..."); // Log cleanup start
       websiteForm.reset();
       youtubeForm.reset();
       setIsWebsiteDialogOpen(false);
       setIsYoutubeDialogOpen(false);
+      console.log("[onSubmit] Forms reset and dialogs closed."); // Log cleanup end
 
-      // After successful submission, decrement points for pro users
+      // Decrement points if applicable
       if (limitCheck.isPro) {
+        console.log("[onSubmit] Decrementing pro points for:", user.emailAddresses[0].emailAddress); // Log points decrement
         await decrementProPoints(user.emailAddresses[0].emailAddress);
       }
 
+      console.log("[onSubmit] Navigating to quiz page:", `/dashboard/quiz/${resource.id}`); // Log navigation
       router.push(`/dashboard/quiz/${resource.id}`);
 
     } catch (error) {
-      console.error("Error in onSubmit:", error);
+      console.error("[onSubmit] Error caught in onSubmit:", error); // Log caught error
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process request",
@@ -438,11 +445,11 @@ export default function SubmitNewURL() {
       });
     } finally {
       setLoading(false);
-      console.log("Loading state set to false"); // Debug log
+      console.log("[onSubmit] Loading state set to false in finally block."); // Log final loading state
     }
   }
 
-  async function handleTextSubmit(data: z.infer<typeof FormSchema>) {
+  async function handleTextSubmit(data: z.infer<typeof TextFormSchema>) {
     console.log("handleTextSubmit called with:", data); // Debug log
 
     try {
@@ -670,55 +677,38 @@ export default function SubmitNewURL() {
 
         {/* Website URL Dialog */}
         <Dialog open={isWebsiteDialogOpen} onOpenChange={setIsWebsiteDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle className="text-2xl">Website URL</DialogTitle>
-              <DialogDescription className="text-base">
-                Paste in a web URL below to upload as a source in MCQ Lab.
+              <DialogTitle>Add Website Content</DialogTitle>
+              <DialogDescription>
+                Enter the URL of a website to generate MCQs from its content.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-6">
-              <Form {...websiteForm}>
-                <form onSubmit={websiteForm.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={websiteForm.control}
-                    name="url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-blue-500">Paste URL *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://" 
-                            disabled={loading} 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg space-y-2">
-                    <h4 className="font-medium">Notes</h4>
-                    <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
-                      <li>Only the visible text on the website will be imported at this moment</li>
-                      <li>Paid articles are not supported</li>
-                    </ul>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={loading}
-                      className="min-w-[100px]"
-                    >
-                      {loading ? "Processing..." : "Insert"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </div>
+            <Form {...websiteForm}>
+              <form onSubmit={websiteForm.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={websiteForm.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com/article" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the full URL including https://
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Processing..." : "Submit"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
 

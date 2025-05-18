@@ -439,30 +439,10 @@ async function handleSubscriptionPaymentSuccess(event: LemonWebhookEvent) {
       subscription_points: calculateSubscriptionPoints(productName)
     };
     
-    // First check if a record already exists
-    const { data: existingUsage } = await supabaseClient
+    // Use upsert with onConflict: 'user_id' instead of checking existence first
+    const { error: usageError } = await supabaseClient
       .from('user_usage')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('period_start', periodStart)
-      .maybeSingle();
-    
-    let usageError;
-    
-    if (existingUsage) {
-      // Update existing record
-      const { error } = await supabaseClient
-        .from('user_usage')
-        .update(usageData)
-        .eq('id', existingUsage.id);
-      usageError = error;
-    } else {
-      // Insert new record
-      const { error } = await supabaseClient
-        .from('user_usage')
-        .insert([usageData]);
-      usageError = error;
-    }
+      .upsert([usageData], { onConflict: 'user_id' });
     
     if (usageError) {
       console.error('Error creating user usage record:', usageError);

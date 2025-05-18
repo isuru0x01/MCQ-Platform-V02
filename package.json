@@ -54,6 +54,7 @@
     "@upstash/redis": "^1.31.6",
     "@vercel/analytics": "^1.4.1",
     "axios": "^1.7.9",
+    "canvas": "^3.1.0",
     "cheerio": "^1.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

@@ -39,26 +39,44 @@ export async function checkUserLimits(userEmail: string): Promise<SubscriptionCh
     const isValidSubscription = endsAt ? currentTime < endsAt : renewsAt ? currentTime < renewsAt : false;
 
     if (isValidSubscription) {
-      // Pro user logic
-      if (subscription.available_points === null) {
-        // Initialize points if null
-        await supabase
-          .from('Subscription')
-          .update({ available_points: 100 })
-          .eq('user_email', userEmail);
-        subscription.available_points = 100;
-      }
-
-      if (subscription.available_points > 0) {
-        return {
-          canSubmit: true,
-          message: `You have ${subscription.available_points} submissions remaining this month.`,
-          isPro: true
-        };
+      // Pro user logic - check user_usage table using the userId from subscription
+      const { data: userUsage } = await supabase
+        .from('user_usage')
+        .select('*')
+        .eq('user_id', subscription.userId) // Use subscription.userId instead of userEmail
+        .single();
+      
+      if (userUsage) {
+        const periodEnd = new Date(userUsage.period_end);
+        const submissionCount = userUsage.submission_count || 0;
+        const subscriptionPoints = userUsage.subscription_points || 100;
+        
+        // Check if period is still valid and user has submissions left
+        if (currentTime < periodEnd && submissionCount < subscriptionPoints) {
+          const remainingSubmissions = subscriptionPoints - submissionCount;
+          return {
+            canSubmit: true,
+            message: `You have ${remainingSubmissions} submissions remaining this month.`,
+            isPro: true
+          };
+        } else if (currentTime >= periodEnd) {
+          return {
+            canSubmit: false,
+            message: "Your subscription period has ended. Please renew your subscription.",
+            isPro: true
+          };
+        } else {
+          return {
+            canSubmit: false,
+            message: "You've used all your submissions for this month.",
+            isPro: true
+          };
+        }
       } else {
+        // No usage record found, but user has valid subscription
         return {
           canSubmit: false,
-          message: "You've used all your submissions for this month.",
+          message: "Your subscription is active but usage data is missing. Please contact support.",
           isPro: true
         };
       }
@@ -66,10 +84,29 @@ export async function checkUserLimits(userEmail: string): Promise<SubscriptionCh
   }
 
   // Basic user logic - check daily submission
+  // We need to get the actual userId format first
+  const { data: user } = await supabase
+    .from('User')
+    .select('id')
+    .eq('email', userEmail)
+    .single();
+    
+  const userId = user?.id;
+  
+  if (!userId) {
+    console.error('No user found with email:', userEmail);
+    return {
+      canSubmit: true,
+      message: "You can submit 1 resource today.",
+      isPro: false
+    };
+  }
+  
+  // Now use the correct userId format for the Resource table
   const { data: todaySubmissions } = await supabase
     .from('Resource')
     .select('created_at')
-    .eq('userId', userEmail)
+    .eq('userId', userId) // Use the correct userId format
     .gte('created_at', today.toISOString())
     .limit(1);
 
@@ -91,7 +128,23 @@ export async function checkUserLimits(userEmail: string): Promise<SubscriptionCh
 export async function decrementProPoints(userEmail: string): Promise<void> {
   const supabase = await supabaseServer();
   
-  await supabase.rpc('decrement_available_points', {
-    user_email_param: userEmail
-  });
-} 
+  // First get the userId from the subscription
+  const { data: subscription } = await supabase
+    .from('Subscription')
+    .select('userId')
+    .eq('user_email', userEmail)
+    .single();
+  
+  if (!subscription?.userId) {
+    console.error('No subscription found for user:', userEmail);
+    return;
+  }
+  
+  // Update to increment submission_count in user_usage table
+  await supabase
+    .from('user_usage')
+    .update({ 
+      submission_count: supabase.rpc('increment_submission_count') 
+    })
+    .eq('user_id', subscription.userId);
+}

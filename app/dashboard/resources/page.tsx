@@ -220,8 +220,44 @@ export default function ResourcesPage() {
         {/* Resources Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredResources.map((resource) => (
-            <Link key={resource.id} href={`/dashboard/quiz/${resource.id}`}>
-              <Card className="overflow-hidden hover:bg-accent transition-colors group">
+            <Card key={resource.id} className="overflow-hidden hover:bg-accent transition-colors group relative">
+              {/* Delete Button with AlertDialog */}
+              <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the resource "{resource.title}" and all associated data. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(resource.id);
+                        }}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+              
+              <Link href={`/dashboard/quiz/${resource.id}`}>
                 {/* Thumbnail */}
                 <div className="aspect-video relative overflow-hidden bg-muted">
                   <Image
@@ -243,8 +279,8 @@ export default function ResourcesPage() {
                     <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-              </Card>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
 

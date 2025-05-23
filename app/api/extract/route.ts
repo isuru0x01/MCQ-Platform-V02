@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 import { load as cheerioLoad } from "cheerio";
 import { YoutubeTranscript } from "youtube-transcript";
+import TranscriptAPI from 'youtube-transcript-api';
 
 export async function POST(req: Request) {
   try {
@@ -56,17 +57,37 @@ export async function POST(req: Request) {
         imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
 
+      // Try primary method first
       try {
         const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
           lang: "en",
         });
         content = transcript.map((t) => t.text).join(" ");
-      } catch (error) {
-        console.error("Error fetching transcript:", error);
-        return NextResponse.json(
-          { error: "Failed to fetch YouTube transcript" },
-          { status: 500 }
-        );
+      } catch (primaryError) {
+        console.error("Error fetching transcript with primary method:", primaryError);
+        
+        // Try alternative method using youtube-transcript-api
+        try {
+          // Validate video ID first
+          const isValidId = await TranscriptAPI.validateID(videoId);
+          
+          if (isValidId) {
+            const alternativeTranscript = await TranscriptAPI.getTranscript(videoId);
+            content = alternativeTranscript.map((t) => t.text).join(" ");
+            console.log("Successfully fetched transcript with alternative method");
+          } else {
+            throw new Error("Invalid video ID or transcript not available");
+          }
+        } catch (alternativeError) {
+          console.error("Error fetching transcript with alternative method:", alternativeError);
+          return NextResponse.json(
+            { 
+              error: "Unable to extract YouTube transcript. Please use a service like https://downsub.com/ to download the subtitles and upload them manually.",
+              details: "Both transcript extraction methods failed."
+            },
+            { status: 500 }
+          );
+        }
       }
     } else {
       // Enhanced article extraction logic with proper headers

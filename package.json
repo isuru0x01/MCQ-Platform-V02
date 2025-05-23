@@ -103,6 +103,7 @@
     "together-ai": "^0.10.0",
     "youtube-captions": "^1.0.2",
     "youtube-transcript": "^1.2.1",
+    "youtube-transcript-api": "^2.0.4",
     "zod": "^3.23.5"
   },
   "devDependencies": {

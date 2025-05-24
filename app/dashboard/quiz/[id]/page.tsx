@@ -16,7 +16,7 @@ import { getUserById } from "@/app/actions/getUser";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Trophy, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Trophy, Clock, CheckCircle2, XCircle, BookOpen, Focus } from "lucide-react";
 
 interface Resource {
   id: number;
@@ -53,6 +53,7 @@ export default function QuizPage() {
   const [uploaderName, setUploaderName] = useState<string>("");
   const [startTime] = useState<Date>(new Date());
   const [allQuestionsAnswered, setAllQuestionsAnswered] = useState(false);
+  const [tutorialCollapsed, setTutorialCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchUploaderName = async () => {
@@ -196,6 +197,10 @@ export default function QuizPage() {
     setAllQuestionsAnswered(Object.keys(answers).length === mcqs.length);
   }, [answers, mcqs.length]);
 
+  const toggleTutorial = () => {
+    setTutorialCollapsed(!tutorialCollapsed);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen">
@@ -247,7 +252,29 @@ export default function QuizPage() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground truncate">{resource.title}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground truncate">{resource.title}</h1>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleTutorial}
+                    className="flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 hover:bg-primary/10"
+                  >
+                    {tutorialCollapsed ? (
+                      <>
+                        <BookOpen className="h-4 w-4" />
+                        <span className="hidden sm:inline">Show Tutorial</span>
+                        <span className="sm:hidden">Tutorial</span>
+                      </>
+                    ) : (
+                      <>
+                        <Focus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Focus Mode</span>
+                        <span className="sm:hidden">Focus</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge variant="secondary" className="text-xs">
                     {resource.type.toUpperCase()}
@@ -302,9 +329,15 @@ export default function QuizPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
-          {/* Resource Content */}
-          <div className="w-full xl:w-1/2 space-y-6">
+        <div className={`flex flex-col gap-6 lg:gap-8 transition-all duration-300 ${
+          tutorialCollapsed ? 'xl:flex-row xl:justify-center' : 'xl:flex-row'
+        }`}>
+          {/* Resource Content - Collapsible */}
+          <div className={`space-y-6 transition-all duration-300 ${
+            tutorialCollapsed 
+              ? 'hidden xl:block xl:w-0 xl:overflow-hidden xl:opacity-0' 
+              : 'w-full xl:w-1/2'
+          }`}>
             <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
               <CardHeader className="pb-4">
                 <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -387,7 +420,11 @@ export default function QuizPage() {
           </div>
 
           {/* Quiz Section */}
-          <div className="w-full xl:w-1/2">
+          <div className={`transition-all duration-300 ${
+            tutorialCollapsed 
+              ? 'w-full max-w-5xl mx-auto' 
+              : 'w-full xl:w-1/2'
+          }`}>
             <Card className="shadow-xl border-0 bg-gradient-to-br from-background to-muted/20">
               <CardHeader className="pb-4">
                 <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2">

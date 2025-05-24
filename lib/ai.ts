@@ -41,7 +41,7 @@ function getTokenLimit(model: string): number {
       return 64000;
     case "deepseek-ai/DeepSeek-V3": // Together AI model
       return 5000;
-    case "llama-3.3-70b-versatile": // Groq model
+    case "deepseek-r1-distill-llama-70b": // Groq model
       return 6000;
     default:
       return 5000; // Default token limit
@@ -84,6 +84,7 @@ export async function generateMCQs(content: string): Promise<any[]> {
         - Avoid absolute terms (all/none/always/never)
         - Prohibited options: "all/none of the above"
         - No trick questions or unimportant detail emphasis
+        - Don't use images since images cannot be displayed correctly
       8. Validation:
         - Test that knowledgeable students would consistently select correct answer
         - Ensure no answer patterns emerge (e.g., correct answers equally distributed)
@@ -106,9 +107,38 @@ export async function generateMCQs(content: string): Promise<any[]> {
     const response = completion.choices[0]?.message?.content;
     if (!response) throw new Error('No response from OpenAI');
 
-    const cleanedResponse = response.replace(/```json|```/g, '').trim();
+    console.log('Raw OpenAI response:', response);
 
-    return JSON.parse(cleanedResponse);
+    // Clean up the response with more robust handling
+    let cleanedResponse = response
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
+      .trim();
+    
+    // Try to extract JSON if there's conversational text
+    if (!cleanedResponse.startsWith('[')) {
+      // Look for JSON array pattern
+      const jsonMatch = cleanedResponse.match(/\[\s*{\s*".*}\s*\]/s);
+      if (jsonMatch) {
+        cleanedResponse = jsonMatch[0];
+      } else {
+        // If we can't find a JSON array, try to remove any leading text
+        cleanedResponse = cleanedResponse.replace(/^[\s\S]*?(\[\s*{)/s, '$1');
+        // And remove any trailing text
+        cleanedResponse = cleanedResponse.replace(/(}\s*\])[\s\S]*$/s, '$1');
+      }
+    }
+
+    try {
+      const questions = JSON.parse(cleanedResponse);
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error('Not a valid questions array');
+      }
+      return questions;
+    } catch (parseError) {
+      console.error('OpenAI JSON parse error:', parseError);
+      throw parseError; // Use the parseError variable instead of error
+    }
 
   } catch (error) {
     console.error("OpenAI Error:", error);
@@ -173,7 +203,7 @@ export async function generateMCQs(content: string): Promise<any[]> {
 
       try {
         // Fallback to Groq
-        const model = "llama-3.3-70b-versatile";
+        const model = "deepseek-r1-distill-llama-70b";
         const tokenLimit = getTokenLimit(model);
         const truncatedContent = truncateText(content, tokenLimit);
 

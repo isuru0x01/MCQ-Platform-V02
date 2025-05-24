@@ -395,11 +395,15 @@ export default function QuizPage() {
                 {mcqs.map((mcq, index) => {
                   const isAnswered = answers[mcq.id] !== undefined;
                   const isCorrect = isAnswered && answers[mcq.id] === mcq.correctOption.toString();
+                  // Disable the question if it's answered and not all questions are completed
+                  const isDisabled = isAnswered && !allQuestionsAnswered;
                   
                   return (
                     <div key={mcq.id}>
                       {/* Question Card with Enhanced Styling */}
-                      <Card className="shadow-md border border-border/50 hover:shadow-lg transition-all duration-200">
+                      <Card className={`shadow-md border border-border/50 hover:shadow-lg transition-all duration-200 ${
+                        isDisabled ? 'opacity-75 cursor-not-allowed' : ''
+                      }`}>
                         <CardContent className="p-4 sm:p-6">
                           <div className="space-y-4">
                             {/* Question Header */}
@@ -426,6 +430,7 @@ export default function QuizPage() {
                               onValueChange={(value) => handleAnswerChange(mcq.id, value)}
                               value={answers[mcq.id]}
                               className="space-y-3"
+                              disabled={isDisabled}
                             >
                               {[
                                 { option: 1, text: mcq.optionA },
@@ -439,7 +444,11 @@ export default function QuizPage() {
                                 return (
                                   <div
                                     key={option}
-                                    className={`flex items-start space-x-3 p-3 rounded-lg border transition-all duration-200 hover:bg-muted/50 ${
+                                    className={`flex items-start space-x-3 p-3 rounded-lg border transition-all duration-200 ${
+                                      isDisabled 
+                                        ? 'cursor-not-allowed' 
+                                        : 'hover:bg-muted/50'
+                                    } ${
                                       isAnswered
                                         ? isCorrectOption
                                           ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
@@ -452,6 +461,7 @@ export default function QuizPage() {
                                     <RadioGroupItem
                                       value={option.toString()}
                                       id={`q${mcq.id}-o${option}`}
+                                      disabled={isDisabled}
                                       className={`mt-0.5 flex-shrink-0 ${
                                         isAnswered
                                           ? isCorrectOption
@@ -460,11 +470,15 @@ export default function QuizPage() {
                                             ? "border-red-500 text-red-500"
                                             : ""
                                           : ""
+                                      } ${
+                                        isDisabled ? 'cursor-not-allowed opacity-60' : ''
                                       }`}
                                     />
                                     <Label
                                       htmlFor={`q${mcq.id}-o${option}`}
-                                      className={`flex-1 cursor-pointer text-sm leading-relaxed min-w-0 ${
+                                      className={`flex-1 text-sm leading-relaxed min-w-0 ${
+                                        isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                                      } ${
                                         isAnswered
                                           ? isCorrectOption
                                             ? "text-green-700 font-medium dark:text-green-400"
@@ -484,18 +498,38 @@ export default function QuizPage() {
                               })}
                             </RadioGroup>
                             
-                            {/* Feedback */}
+                            {/* Answer Feedback */}
                             {isAnswered && (
-                              <div className="mt-4 p-3 rounded-lg">
-                                {isCorrect ? (
-                                  <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                                    <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                                    <span>Correct! Well done.</span>
+                              <div className={`mt-4 p-3 rounded-lg border-l-4 ${
+                                isCorrect
+                                  ? "bg-green-50 border-green-400 dark:bg-green-950/20"
+                                  : "bg-red-50 border-red-400 dark:bg-red-950/20"
+                              }`}>
+                                <div className="flex items-center gap-2">
+                                  {isCorrect ? (
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4 text-red-600" />
+                                  )}
+                                  <span className={`text-sm font-medium ${
+                                    isCorrect ? "text-green-800 dark:text-green-400" : "text-red-800 dark:text-red-400"
+                                  }`}>
+                                    {isCorrect ? "Correct!" : "Incorrect"}
+                                  </span>
+                                </div>
+                                {!isCorrect && (
+                                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                                    The correct answer is: {[
+                                      mcq.optionA,
+                                      mcq.optionB,
+                                      mcq.optionC,
+                                      mcq.optionD,
+                                    ][mcq.correctOption - 1]}
                                   </p>
-                                ) : (
-                                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
-                                    <XCircle className="h-4 w-4 flex-shrink-0" />
-                                    <span>Incorrect. The correct answer is option {mcq.correctOption}.</span>
+                                )}
+                                {!allQuestionsAnswered && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    This question is now locked. Complete all questions to review your answers.
                                   </p>
                                 )}
                               </div>
@@ -504,35 +538,42 @@ export default function QuizPage() {
                         </CardContent>
                       </Card>
                       
-                      {/* Visual Separator between questions */}
+                      {/* Visual Separator */}
                       {index < mcqs.length - 1 && (
-                        <div className="flex items-center justify-center py-4">
-                          <Separator className="flex-1" />
-                          <div className="px-4">
-                            <div className="w-2 h-2 bg-muted-foreground/30 rounded-full" />
-                          </div>
-                          <Separator className="flex-1" />
-                        </div>
+                        <Separator className="my-6 sm:my-8" />
                       )}
                     </div>
                   );
                 })}
-
-                {/* Final Progress Summary */}
+                
+                {/* Progress Summary */}
                 {isCompleted && (
-                  <Card className="mt-8 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border-green-200 dark:border-green-800">
-                    <CardContent className="p-4 sm:p-6 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
-                        <h3 className="text-lg sm:text-xl font-bold">Quiz Completed!</h3>
+                  <Card className="mt-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+                    <CardContent className="p-6 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-4">
+                        <Trophy className="h-6 w-6 text-yellow-500" />
+                        <h3 className="text-xl font-bold">Quiz Completed!</h3>
                       </div>
-                      <p className="text-base sm:text-lg font-semibold mb-2">
-                        Final Score: <span className={score >= 70 ? "text-green-600" : score >= 50 ? "text-yellow-600" : "text-red-600"}>
-                          {score.toFixed(1)}%
-                        </span>
-                      </p>
-                      <p className="text-sm sm:text-base text-muted-foreground">
-                        You answered {correctCount} out of {mcqs.length} questions correctly.
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className="text-2xl font-bold text-primary">{correctCount}</div>
+                          <div className="text-sm text-muted-foreground">Correct Answers</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-primary">{mcqs.length}</div>
+                          <div className="text-sm text-muted-foreground">Total Questions</div>
+                        </div>
+                        <div>
+                          <div className={`text-2xl font-bold ${
+                            score >= 70 ? "text-green-600" : score >= 50 ? "text-yellow-600" : "text-red-600"
+                          }`}>
+                            {score.toFixed(1)}%
+                          </div>
+                          <div className="text-sm text-muted-foreground">Final Score</div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-4">
+                        All questions are now unlocked for review. You can change your answers if needed.
                       </p>
                     </CardContent>
                   </Card>
@@ -544,4 +585,7 @@ export default function QuizPage() {
       </div>
     </div>
   );
+
+  // Calculate if all questions are answered
+  const allQuestionsAnswered = Object.keys(answers).length === mcqs.length;
 }

@@ -63,7 +63,6 @@ export default function Search() {
           Search for quizzes by title, topic, or content type.
         </p>
       </div> */}
-
       <div className="relative">
         <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -77,7 +76,6 @@ export default function Search() {
           onFocus={() => setShowResults(true)}
         />
       </div>
-
       {/* Search Results Dropdown */}
       {showResults && (searchQuery || loading) && (
         <div className="absolute mt-2 w-full bg-background border rounded-lg shadow-lg z-50">
@@ -88,11 +86,11 @@ export default function Search() {
           ) : results.length > 0 ? (
             <div className="max-h-[70vh] overflow-y-auto">
               {results.map((resource) => (
-                <Link 
-                  key={resource.id} 
+                <Link
+                  key={resource.id}
                   href={`/dashboard/quiz/${resource.id}`}
                   onClick={() => setShowResults(false)}
-                >
+                  >
                   <Card className="flex items-center p-3 hover:bg-accent transition-colors">
                     <div className="h-16 w-24 relative mr-3">
                       <Image
@@ -125,7 +123,6 @@ export default function Search() {
           ) : null}
         </div>
       )}
-
       {/* Backdrop to close search results */}
       {showResults && (
         <div 

@@ -19,5 +19,5 @@ export default function Cancel() {
         </Link>
       </div>
     </main>
-  )
+  );
 }

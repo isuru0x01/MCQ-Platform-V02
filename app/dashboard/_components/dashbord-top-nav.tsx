@@ -104,5 +104,5 @@ export default function DashboardTopNav({ children, onToggleSidebar, sidebarColl
       </header>
       {children}
     </div>
-  )
+  );
 }

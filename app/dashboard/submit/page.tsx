@@ -80,6 +80,17 @@ export default function SubmitNewURL() {
 
     const file = acceptedFiles[0];
     if (file) {
+      // Check file size (1MB = 1024 * 1024 bytes)
+      const maxSizeInBytes = 1024 * 1024; // 1MB
+      if (file.size > maxSizeInBytes) {
+        toast({
+          title: "File Too Large",
+          description: `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the 1MB limit. Please choose a smaller file.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSelectedFile(file);
       setIsProcessing(true); // Set processing state
       await handleFileUpload(file);

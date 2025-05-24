@@ -125,7 +125,6 @@ export default function Dashboard() {
           </Link>
         </Button>
       </div>
-
       {/* Updated Navigation Pills */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         <Button 
@@ -156,7 +155,6 @@ export default function Dashboard() {
           Top Performing
         </Button>
       </div>
-
       {/* Resources Grid with conditional title */}
       <div>
         <h2 className="text-xl font-semibold mb-4">
@@ -194,7 +192,6 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
-
       {/* Empty State */}
       {resources.length === 0 && (
         <div className="text-center py-12">
@@ -210,14 +207,16 @@ export default function Dashboard() {
           </Button>
         </div>
       )}
-
       {/* Performance Section */}
       {performanceData.length > 0 && (
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Recent Performance</h2>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard/performance" className="flex items-center gap-1">
+              <Link
+                href="/dashboard/performance"
+                className="flex items-center gap-1"
+                >
                 View All
                 <ArrowUpRight className="h-4 w-4" />
               </Link>

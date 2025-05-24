@@ -108,7 +108,6 @@ export default function BlogSample() {
           Top Performing
         </Button>
       </div>
-
       {/* Resources Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {quizzes.map((quiz) => (
@@ -147,7 +146,6 @@ export default function BlogSample() {
           </Link>
         ))}
       </div>
-
       {/* Empty State */}
       {quizzes.length === 0 && (
         <div className="text-center py-12">

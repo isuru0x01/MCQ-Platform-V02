@@ -104,7 +104,11 @@ const SpringAnimatedFeatures = () => {
               key={project.id}
               className="mt-5 text-left border p-6 rounded-md dark:bg-black"
             >
-              <Link href={project?.url} target="_blank" rel="noopener noreferrer" >
+              <Link
+                href={project?.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                >
                 <Image
                   src={project?.imageDark ? project?.imageDark : project.image}
                   width={40}
@@ -120,11 +124,11 @@ const SpringAnimatedFeatures = () => {
                 </div>
               </Link>
             </motion.div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
 export default SpringAnimatedFeatures

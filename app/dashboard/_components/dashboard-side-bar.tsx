@@ -23,7 +23,9 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
     <div className="lg:block hidden border-r h-full transition-all duration-300">
       <div className="flex h-full max-h-screen flex-col gap-2">
         <div className="flex h-[55px] items-center justify-between border-b px-3 w-full">
-          <Link className="flex items-center gap-2 font-semibold ml-1" href="/">
+          <Link
+            className="flex items-center gap-2 font-semibold ml-1"
+            href="/">
             <span className={`transition-all duration-300 ${
               collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
             }`}>MCQ Lab</span>
@@ -39,8 +41,7 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
                 "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900 transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50": pathname === "/dashboard"
               })}
               href="/dashboard"
-              title={collapsed ? "Home" : ""}
-            >
+              title={collapsed ? "Home" : ""}>
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white flex-shrink-0">
                 <HomeIcon className="h-3 w-3" />
               </div>
@@ -53,8 +54,7 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
                 "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900 transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50": pathname === "/dashboard/projects"
               })}
               href="/dashboard/resources"
-              title={collapsed ? "Resources" : ""}
-            >
+              title={collapsed ? "Resources" : ""}>
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white flex-shrink-0">
                 <Folder className="h-3 w-3" />
               </div>
@@ -67,8 +67,7 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
                 "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900 transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50": pathname === "/dashboard/submit"
               })}
               href="/dashboard/submit"
-              title={collapsed ? "Add Resource" : ""}
-            >
+              title={collapsed ? "Add Resource" : ""}>
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white flex-shrink-0">
                 <Banknote className="h-3 w-3" />
               </div>
@@ -81,8 +80,7 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
                 "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900 transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50": pathname === "/dashboard/performance"
               })}
               href="/dashboard/performance"
-              title={collapsed ? "Your Performance" : ""}
-            >
+              title={collapsed ? "Your Performance" : ""}>
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white flex-shrink-0">
                 <Banknote className="h-3 w-3" />
               </div>
@@ -99,8 +97,7 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
               })}
               href="/dashboard/settings"
               id="onboarding"
-              title={collapsed ? "Settings" : ""}
-            >
+              title={collapsed ? "Settings" : ""}>
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white flex-shrink-0">
                 <Settings className="h-3 w-3" />
               </div>
@@ -112,5 +109,5 @@ export default function DashboardSideBar({ collapsed }: DashboardSideBarProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -174,7 +174,6 @@ export default function ResourcesPage() {
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         {/* Filters */}
@@ -257,7 +256,7 @@ export default function ResourcesPage() {
                 </AlertDialog>
               </div>
               
-              <Link href={`/dashboard/quiz/${resource.id}`}>
+              <Link href={`/dashboard/quiz/${resource.id}`} >
                 {/* Thumbnail */}
                 <div className="aspect-video relative overflow-hidden bg-muted">
                   <Image

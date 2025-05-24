@@ -70,28 +70,31 @@ export default function NavBar() {
             </div>
             <NavigationMenu>
                 <NavigationMenuList className="max-[825px]:hidden flex gap-3 w-[100%] justify-between">
-                    <Link href="/" className="pl-2 pr-2 flex items-center" aria-label="Home">
+                    <Link
+                        href="/"
+                        className="pl-2 pr-2 flex items-center"
+                        aria-label="Home">
                         <BlocksIcon aria-hidden="true" />
                         <span className="font-bold ml-2">MCQ Lab</span>
                     </Link>
                 </NavigationMenuList>
                 <NavigationMenuList>
                     <NavigationMenuItem className="max-[825px]:hidden">
-                        <Link href="/dashboard" legacyBehavior passHref>
+                        <Link href="/dashboard" passHref>
                             <Button variant="ghost">
                                 Dashboard
                             </Button>
                         </Link>
                     </NavigationMenuItem>
                     <NavigationMenuItem className="max-[825px]:hidden">
-                        <Link href="/about" legacyBehavior passHref>
+                        <Link href="/about" passHref>
                             <Button variant="ghost">
                                 About
                             </Button>
                         </Link>
                     </NavigationMenuItem>
                     <NavigationMenuItem className="max-[825px]:hidden">
-                        <Link href="/contact" legacyBehavior passHref>
+                        <Link href="/contact" passHref>
                             <Button variant="ghost">
                                 Contact
                             </Button>

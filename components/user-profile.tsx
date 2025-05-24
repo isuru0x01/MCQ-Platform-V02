@@ -67,5 +67,5 @@ export function UserProfile() {
                 </SignOutButton>
             </DropdownMenuContent>
         </DropdownMenu>
-    )
+    );
 }

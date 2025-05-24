@@ -92,5 +92,5 @@ export default async function MarketingPage() {
 
       </div>
     </PageWrapper>
-  )
+  );
 }

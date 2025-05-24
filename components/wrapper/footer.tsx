@@ -102,7 +102,7 @@ export default function DonationPage() {
                                     <a href="/refund-policy" className="transition hover:opacity-75">Refund Policy </a>
                                 </li>
                             </ul>
-                            <p className="mt-8 text-xs">&copy; 2024. Nexlution. All rights reserved.</p>
+                            <p className="mt-8 text-xs">&copy; 2025. Nexlution. All rights reserved.</p>
                         </div>
                     </div>
                 </div>

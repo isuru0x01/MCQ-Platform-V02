@@ -572,7 +572,7 @@ export default function QuizPage() {
                                 )}
                                 {!allQuestionsAnswered && (
                                   <p className="text-xs text-muted-foreground mt-2">
-                                    This question is now locked. Complete all questions to review your answers.
+                                    This question is now locked. Complete all questions and review your answers.
                                   </p>
                                 )}
                               </div>

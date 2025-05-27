@@ -50,7 +50,7 @@ function getTokenLimit(model: string): number {
 
 // Main function to generate MCQs
 export async function generateMCQs(content: string): Promise<any[]> {
-  const prompt = `Generate exactly 20 multiple choice questions in JSON format based on this content: ${content}
+  const prompt = `Only return the JSON response. Generate exactly 20 multiple choice questions in JSON format based on this content: ${content}
 
       Return ONLY a JSON array with this exact structure:
       [
@@ -101,7 +101,7 @@ export async function generateMCQs(content: string): Promise<any[]> {
       messages: [
         {
           role: "user",
-          content: `Generate 20 MCQs from the following content:\n${truncatedContent}`,
+          content: prompt.replace("${content}", truncatedContent),
         },
       ],
       model: model,
@@ -288,7 +288,7 @@ export async function generateTutorial(content: string): Promise<string> {
   
   1. **Title**  
      - Make it specific and benefit-driven.  
-     - Example: “Build a Real-Time Chat App with Firebase and React in Under an Hour”
+     - Example: "Build a Real-Time Chat App with Firebase and React in Under an Hour"
   
   2. **Introduction (150-200 words max)**  
      - Answer these three questions clearly:
@@ -319,10 +319,10 @@ export async function generateTutorial(content: string): Promise<string> {
      - Use **diagrams or illustrations** if they clarify complex ideas.
   
   7. **Interactive Learning**
-     - Include **reflective questions**, **“Try it Yourself” exercises**, or **mini challenges** at key points.
+     - Include **reflective questions**, **"Try it Yourself" exercises**, or **mini challenges** at key points.
      - Examples:
-       - “Can you modify this function to also handle edge cases?”
-       - “Try running the code without step 2. What do you observe?”
+       - "Can you modify this function to also handle edge cases?"
+       - "Try running the code without step 2. What do you observe?"
   
   8. **Highlight Key Concepts**
      - Use bold, callout blocks, or bullet points to emphasize:

@@ -12,16 +12,24 @@ if (config.auth.enabled) {
   }
 }
 
+// Updated route matcher to include both dashboard and user-profile routes
 const isProtectedRoute = config.auth.enabled
-  ? createRouteMatcher(["/dashboard(.*)"])
+  ? createRouteMatcher(["/dashboard(.*)", "/user-profile(.*)"])
   : () => false;
+
+// Function to check if a path is a quiz view page
+const isQuizViewPage = (path: string) => {
+  return /^\/dashboard\/quiz\/[^\/]+$/.test(path);
+};
 
 export default function middleware(req: any) {
   if (config.auth.enabled) {
     return clerkMiddleware(async (auth, req) => {
       const resolvedAuth = await auth();
-
-      if (!resolvedAuth.userId && isProtectedRoute(req)) {
+      const path = req.nextUrl.pathname;
+      
+      // Allow access to quiz view pages without authentication
+      if (!resolvedAuth.userId && isProtectedRoute(req) && !isQuizViewPage(path)) {
         return resolvedAuth.redirectToSignIn();
       } else {
         return NextResponse.next();

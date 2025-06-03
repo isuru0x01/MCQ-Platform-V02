@@ -19,18 +19,36 @@ import {
     CreditCard,
     LogOut,
     Settings,
-    User
+    User,
+    LogIn
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 export function UserProfile() {
     const router = useRouter()
 
     if (!config?.auth?.enabled) {
         router.back()
+        return null; // Add early return to prevent rendering anything
     }
-    const { user } = useUser();
+    
+    const { user, isLoaded } = useUser();
+    
+    // If Clerk is still loading or user is not logged in, show sign-in button
+    if (!isLoaded || !user) {
+        return (
+            <Link href="/sign-in">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <LogIn className="h-4 w-4" />
+                    <span className="sr-only">Sign In</span>
+                </Button>
+            </Link>
+        );
+    }
+    
+    // Only render the dropdown if user is logged in
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild className="w-[2.25rem] h-[2.25rem]">

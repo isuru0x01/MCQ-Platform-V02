@@ -110,7 +110,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.15.21",
     "@types/node-fetch": "^2.6.12",
-    "@types/react": "^19.1.5",
+    "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.27.0",

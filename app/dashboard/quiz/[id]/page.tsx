@@ -16,7 +16,8 @@ import { getUserById } from "@/app/actions/getUser";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Trophy, Clock, CheckCircle2, XCircle, BookOpen, Focus } from "lucide-react";
+import { Trophy, Clock, CheckCircle2, XCircle, BookOpen, Focus, Lock } from "lucide-react";
+import Link from "next/link";
 
 interface Resource {
   id: number;
@@ -180,12 +181,51 @@ export default function QuizPage() {
     }
   }, [answers, mcqs, isPerformanceSubmitted]);
 
+  // In the QuizPage component, add this near the top of the component body
+  
+  // Add this after the existing state declarations
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  
+  // Modify the handleAnswerChange function to check for authentication
   const handleAnswerChange = (questionId: number, answer: string) => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to take this quiz and track your progress.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setAnswers((prev) => ({
       ...prev,
       [questionId]: answer,
     }));
   };
+  
+  // Add this JSX right before the quiz questions section in the return statement
+  // Add this inside the Quiz Section Card, right after <CardContent className="space-y-6 sm:space-y-8">
+  {!user && (
+    <div className="mb-6 p-4 border border-primary/20 bg-primary/5 rounded-lg">
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <h3 className="font-medium text-base sm:text-lg mb-1">Sign in to take this quiz</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            You can view this quiz content, but you need to sign in to answer questions and track your progress.
+          </p>
+          <div className="flex gap-3">
+            <Button asChild variant="default">
+              <Link href="/sign-in">Sign In</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/sign-up">Create Account</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
 
   const getYouTubeEmbedUrl = (url: string) => {
     const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/);
@@ -434,19 +474,64 @@ export default function QuizPage() {
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6 sm:space-y-8">
-                {mcqs.map((mcq, index) => {
-                  const isAnswered = answers[mcq.id] !== undefined;
-                  const isCorrect = isAnswered && answers[mcq.id] === mcq.correctOption.toString();
-                  // Disable the question if it's answered and not all questions are completed
-                  const isDisabled = isAnswered && !allQuestionsAnswered;
-                  
-                  return (
-                    <div key={mcq.id}>
-                      {/* Question Card with Enhanced Styling */}
-                      <Card className={`shadow-md border border-border/50 hover:shadow-lg transition-all duration-200 ${
-                        isDisabled ? 'opacity-75 cursor-not-allowed' : ''
-                      }`}>
+              <CardContent className="space-y-6 sm:space-y-8 relative">
+                {/* Auth Overlay for Quiz Section */}
+                {!user && (
+                  <div className="absolute inset-0 backdrop-blur-md z-10 flex items-center justify-center">
+                    <div className="bg-background/95 p-6 rounded-lg shadow-lg max-w-md mx-auto text-center">
+                      <Lock className="h-12 w-12 mx-auto mb-4 text-primary/70" />
+                      <h3 className="text-xl font-bold mb-2">Sign in to access the quiz</h3>
+                      <p className="text-muted-foreground mb-6">
+                        You can view the tutorial content, but you need to sign in to take the quiz and track your progress.
+                      </p>
+                      <div className="flex gap-3 justify-center">
+                        <Button asChild variant="default">
+                          <Link href="/sign-in">Sign In</Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link href="/sign-up">Create Account</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Remove the existing sign-in prompt since we now have the overlay */}
+                {/* {!user && (
+                  <div className="mb-6 p-4 border border-primary/20 bg-primary/5 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-base sm:text-lg mb-1">Sign in to take this quiz</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          You can view this quiz content, but you need to sign in to answer questions and track your progress.
+                        </p>
+                        <div className="flex gap-3">
+                          <Button asChild variant="default">
+                            <Link href="/sign-in">Sign In</Link>
+                          </Button>
+                          <Button asChild variant="outline">
+                            <Link href="/sign-up">Create Account</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )} */}
+                
+                {/* Quiz Questions - Apply blur class when user is not logged in */}
+                <div className={!user ? 'filter blur-sm pointer-events-none' : ''}>
+                  {mcqs.map((mcq, index) => {
+                    const isAnswered = answers[mcq.id] !== undefined;
+                    const isCorrect = isAnswered && answers[mcq.id] === mcq.correctOption.toString();
+                    // Disable the question if it's answered and not all questions are completed
+                    const isDisabled = isAnswered && !allQuestionsAnswered;
+                    
+                    return (
+                      <div key={mcq.id}>
+                        {/* Question Card with Enhanced Styling */}
+                        <Card className={`shadow-md border border-border/50 hover:shadow-lg transition-all duration-200 ${
+                          isDisabled ? 'opacity-75 cursor-not-allowed' : ''
+                        }`}>
                         <CardContent className="p-4 sm:p-6">
                           <div className="space-y-4">
                             {/* Question Header */}
@@ -588,6 +673,7 @@ export default function QuizPage() {
                     </div>
                   );
                 })}
+                </div>
                 
                 {/* Progress Summary */}
                 {isCompleted && (

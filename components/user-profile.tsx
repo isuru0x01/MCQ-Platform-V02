@@ -28,13 +28,12 @@ import { Button } from "@/components/ui/button"
 
 export function UserProfile() {
     const router = useRouter()
-
+    const { user, isLoaded } = useUser();
+    
     if (!config?.auth?.enabled) {
         router.back()
         return null; // Add early return to prevent rendering anything
     }
-    
-    const { user, isLoaded } = useUser();
     
     // If Clerk is still loading or user is not logged in, show sign-in button
     if (!isLoaded || !user) {

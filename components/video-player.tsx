@@ -62,8 +62,8 @@ export const VideoPlayer: React.FC<CustomVideoPlayerProps> = ({ videoSrc }) => {
       if (currentTime - lastMouseMoveTime > 3000 && isFullscreen) {
         setShowControls(false);
       }
-    };
-
+      };
+  1
     const playerElement = playerRef.current; // Store ref value in a variable
     
     if (playerElement) {

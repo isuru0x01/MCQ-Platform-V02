@@ -298,19 +298,19 @@ export default function QuizPage() {
                     variant="outline"
                     size="sm"
                     onClick={toggleTutorial}
-                    className="flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 hover:bg-primary/10"
+                    className="flex items-center gap-2 text-xs sm:text-sm transition-all duration-200 hover:bg-primary/10 rounded-full"
                   >
                     {tutorialCollapsed ? (
                       <>
                         <BookOpen className="h-4 w-4" />
-                        <span className="hidden sm:inline">Show Tutorial</span>
-                        <span className="sm:hidden">Tutorial</span>
+                        <span className="hidden sm:inline">View Tutorial</span>
+                        <span className="sm:hidden">Content</span>
                       </>
                     ) : (
                       <>
                         <Focus className="h-4 w-4" />
-                        <span className="hidden sm:inline">Focus Mode</span>
-                        <span className="sm:hidden">Focus</span>
+                        <span className="hidden sm:inline">Quiz Only</span>
+                        <span className="sm:hidden">Quiz</span>
                       </>
                     )}
                   </Button>

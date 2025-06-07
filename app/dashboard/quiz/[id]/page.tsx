@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Trophy, Clock, CheckCircle2, XCircle, BookOpen, Focus, Lock } from "lucide-react";
 import Link from "next/link";
+import 'katex/dist/katex.min.css';
+import { InlineMath, BlockMath } from 'react-katex';
 
 interface Resource {
   id: number;
@@ -40,6 +42,155 @@ interface MCQ {
   correctOption: number;
   quizId: number;
 }
+
+const MathRenderer = ({ text, display = false }: { text: React.ReactNode; display?: boolean }) => {
+  if (!text) return null;
+  
+  // If text is a React element, return it as is
+  if (React.isValidElement(text)) {
+    return text;
+  }
+  
+  // Convert to string if it's a React node
+  const content = typeof text === 'string' ? text : String(text);
+  const cleanText = content.trim();
+  
+  try {
+    // Handle raw LaTeX (with or without 'math' prefix)
+    if (cleanText.startsWith('math ')) {
+      // Get pure LaTeX without the 'math' prefix
+      const latexContent = cleanText.slice(5).trim();
+      return display ? <BlockMath math={latexContent} /> : <InlineMath math={latexContent} />;
+    }
+    
+    // If it looks like LaTeX (has commands or special chars), render it directly
+    if (cleanText.includes('\\') || cleanText.includes('_') || 
+        cleanText.includes('^') || cleanText.includes('{')) {
+      return display ? <BlockMath math={cleanText} /> : <InlineMath math={cleanText} />;
+    }
+    
+    // Handle LaTeX expressions with delimiters
+    if ((cleanText.startsWith('$') && cleanText.endsWith('$')) ||
+        (cleanText.startsWith('\\(') && cleanText.endsWith('\\)')) ||
+        (cleanText.startsWith('\\[') && cleanText.endsWith('\\]'))) {
+      const mathExp = cleanText.replace(/^\$|\$$|^\\\(|\\\)$|^\\\[|\\\]$/g, '');
+      return display ? <BlockMath math={mathExp} /> : <InlineMath math={mathExp} />;
+    }
+    
+    // Handle raw LaTeX without delimiters (but only if it contains LaTeX commands)
+    if ((cleanText.includes('\\') || cleanText.includes('_') || cleanText.includes('^') || 
+         cleanText.includes('{') || cleanText.includes('}')) &&
+        // Don't treat URLs or other common patterns as math
+        !cleanText.startsWith('http') && !cleanText.includes(' ') && cleanText.length < 100) {
+      return display ? <BlockMath math={cleanText} /> : <InlineMath math={cleanText} />;
+    }
+    
+    return <>{content}</>;
+  } catch (error) {
+    console.error('Error rendering math:', error);
+    return <span className="text-red-500">Error rendering: {content}</span>;
+  }
+};
+
+const MarkdownWithAutoMath = ({ content }: { content: string }) => {  // Process content to handle math expressions
+  const processContent = (content: string) => {
+    // Pre-process the content to handle multi-line math expressions
+    return content.replace(/math\s+([\s\S]+?)(?=\n\n|$)/g, (match, formula) => {
+      return `math ${formula.replace(/\n/g, ' ')}`;
+    });
+  };
+
+  return (
+    <div className="prose dark:prose-invert max-w-none text-sm sm:text-base overflow-x-auto">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // Headers
+          h1: ({ children }) => <h1 className="text-2xl font-bold my-4">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-xl font-bold my-3">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-lg font-bold my-2">{children}</h3>,
+            // Paragraphs with inline math support
+          p: ({ children }) => {
+            if (!children) return null;
+            
+            // Convert children to an array and process each part
+            const processChildren = (nodes: React.ReactNode): React.ReactNode => {
+              return React.Children.map(nodes, (child, i) => {
+                if (typeof child === 'string') {
+                  // Split into segments that start with 'math' and those that don't
+                  const segments = child.split(/(math\s+[^$]*?(?=\s*(?:math\s|$)))/g);
+                  
+                  return segments.map((segment, idx) => {
+                    // Handle math segments
+                    if (segment.startsWith('math ')) {
+                      const mathContent = segment.slice(5).trim();
+                      return <MathRenderer key={`${i}-${idx}`} text={mathContent} display={false} />;
+                    }
+                    // Handle regular text segments
+                    return segment ? <span key={`${i}-${idx}`}>{segment}</span> : null;
+                  });
+                }
+                return child;
+              });
+            };
+            
+            return <p className="my-4">{processChildren(children)}</p>;
+          },
+          
+          // Lists
+          ul: ({ children }) => <ul className="list-disc pl-6 my-4">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-6 my-4">{children}</ol>,
+          li: ({ children }) => <li className="mb-1">{children}</li>,
+          
+          // Code blocks
+          code: ({ node, inline, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '');
+            
+            if (inline) {
+              return <code className="bg-muted px-1.5 py-0.5 rounded text-xs sm:text-sm">{children}</code>;
+            }
+            
+            const code = String(children).replace(/\n$/, '');
+            if (match?.[1] === 'math' || className === 'language-math') {
+              return <BlockMath math={code} />;
+            }
+            
+            return (
+              <pre className="bg-muted p-4 rounded-lg overflow-x-auto my-4 text-xs sm:text-sm">
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              </pre>
+            );
+          },
+          
+          // Blockquotes
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-primary pl-4 italic my-4">
+              {children}
+            </blockquote>
+          ),
+          
+          // Links
+          a: ({ href, children }) => (
+            <a href={href} className="text-primary hover:underline break-words" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          ),
+          
+          // Horizontal Rule
+          hr: () => <hr className="my-6 border-t border-border" />,
+          
+          // Inline elements
+          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+        }}
+      >
+        {processContent(content)}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
 export default function QuizPage() {
   const params = useParams();
@@ -420,40 +571,7 @@ export default function QuizPage() {
                   <CardTitle className="text-lg sm:text-xl">Tutorial</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose max-w-none dark:prose-invert text-sm sm:text-base">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        h1: ({ children }) => <h1 className="text-xl sm:text-2xl font-bold mb-4">{children}</h1>,
-                        h2: ({ children }) => <h2 className="text-lg sm:text-xl font-bold mb-3">{children}</h2>,
-                        h3: ({ children }) => <h3 className="text-base sm:text-lg font-bold mb-2">{children}</h3>,
-                        p: ({ children }) => <p className="mb-4 text-sm sm:text-base">{children}</p>,
-                        ul: ({ children }) => <ul className="list-disc pl-6 mb-4">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal pl-6 mb-4">{children}</ol>,
-                        li: ({ children }) => <li className="mb-1 text-sm sm:text-base">{children}</li>,
-                        code: ({ children }) => (
-                          <code className="bg-muted px-1.5 py-0.5 rounded-md text-xs sm:text-sm">{children}</code>
-                        ),
-                        pre: ({ children }) => (
-                          <pre className="bg-muted p-4 rounded-lg overflow-x-auto mb-4 text-xs sm:text-sm">{children}</pre>
-                        ),
-                        blockquote: ({ children }) => (
-                          <blockquote className="border-l-4 border-primary pl-4 italic mb-4 text-sm sm:text-base">
-                            {children}
-                          </blockquote>
-                        ),
-                        a: ({ href, children }) => (
-                          <a href={href} className="text-primary hover:underline break-words">
-                            {children}
-                          </a>
-                        ),
-                      }}
-                    >
-                      {resource.tutorial
-                        .replace(/^```(markdown)?\s*/, '')
-                        .replace(/\s*```$/, '')}
-                    </ReactMarkdown>
-                  </div>
+                  <MarkdownWithAutoMath content={resource.tutorial} />
                 </CardContent>
               </Card>
             )}
@@ -715,3 +833,12 @@ export default function QuizPage() {
     </div>
   );
 }
+
+const MathComponent = ({ math, display = false }: { math: string; display?: boolean }) => {
+  try {
+    return display ? <BlockMath math={math} /> : <InlineMath math={math} />;
+  } catch (error) {
+    console.error('Error rendering math:', error);
+    return <span className="text-red-500">Error rendering math expression</span>;
+  }
+};

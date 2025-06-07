@@ -82,10 +82,13 @@ export async function POST(req: Request) {
           console.error("Error fetching transcript with alternative method:", alternativeError);
           return NextResponse.json(
             { 
-              error: "Unable to extract YouTube transcript. Please use a service like https://downsub.com/ to download the subtitles and upload them manually.",
+              content: "", // Empty content indicates transcript extraction failed
+              imageUrl,
+              title, // Still return the title for fallback mechanism
+              error: "Unable to extract YouTube transcript. Using video title as fallback.",
               details: "Both transcript extraction methods failed."
             },
-            { status: 500 }
+            { status: 200 } // Return 200 instead of 500 to allow processing to continue
           );
         }
       }

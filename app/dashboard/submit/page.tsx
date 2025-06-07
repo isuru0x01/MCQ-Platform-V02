@@ -416,7 +416,7 @@ export default function SubmitNewURL() {
         description: "Creating a comprehensive tutorial...",
       });
       console.log("[onSubmit] Generating tutorial..."); // Log tutorial generation start
-      const tutorial = await generateTutorial(content);
+      const tutorial = await generateTutorial(content, title);
       console.log("[onSubmit] Tutorial generated. Updating resource..."); // Log tutorial update start
 
       const { error: tutorialError } = await supabaseClient

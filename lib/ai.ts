@@ -40,11 +40,11 @@ function getTokenLimit(model: string): number {
     case "gpt-4.1": // OpenAI model
       return 16384;
     case "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free": // Together AI model
-      return 5000;
+      return 3000; // Reduced from 5000 to leave room for input tokens
     case "meta-llama/llama-4-maverick-17b-128e-instruct": // Groq model
-      return 8192;
+      return 4000; // Reduced from 8192 to leave room for input tokens
     default:
-      return 5000; // Default token limit
+      return 3000; // Default token limit reduced
   }
 }
 
@@ -272,9 +272,19 @@ export async function generateMCQs(content: string): Promise<any[]> {
  * @param {string} content - The input content to summarize
  * @returns {Promise<string>} - The generated markdown summary
  */
-export async function generateTutorial(content: string): Promise<string> {
-  const prompt = `Generate a **comprehensive, engaging, and technically accurate tutorial** based on the provided content.
-
+export async function generateTutorial(content: string, title?: string): Promise<string> {
+  // If content is empty but we have a title (fallback for YouTube videos with failed transcript extraction)
+  if ((!content || content.trim() === "") && title) {
+    console.log("Using video title as fallback for tutorial generation:", title);
+    content = `Video Title: ${title}. Please create a tutorial based on this title.`;
+  }
+  
+  const prompt = `You are a skilled tutorial writer. Create a comprehensive, well-structured tutorial in markdown format.
+  
+  ## Guidelines
+  1. **Title**
+     - Use a clear, descriptive H1 title that includes the main topic and goal.
+  
   ## General Guidelines
   
   - The tutorial must be written in **Markdown** format.
@@ -358,12 +368,12 @@ export async function generateTutorial(content: string): Promise<string> {
   - **Visually scannable**: effective use of formatting and whitespace.
   
   ## Input
-  Content to use for the tutorial: ${content}`;
+  The title or content to use for the tutorial: ${content}`;
 
 
   try {
     // Try with Groq first
-    const model = "meta-llama/llama-4-maverick-17b-128e-instruct";
+    const model = "deepseek-r1-distill-llama-70b";
     const tokenLimit = getTokenLimit(model);
     const truncatedContent = truncateText(content, tokenLimit);
 
@@ -376,7 +386,7 @@ export async function generateTutorial(content: string): Promise<string> {
       ],
       model: model,
       temperature: 0.9,
-      max_tokens: 5000,
+      max_tokens: 4096,
       top_p: 1,
       stream: false,
     });

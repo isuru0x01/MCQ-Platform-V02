@@ -192,7 +192,7 @@ export default function SubmitNewURL() {
 
       console.log("Resource created:", resource);
 
-      const mcqs = await generateMCQs(data.content);
+      const mcqs = await generateMCQs(data.content, data.title);
 
       const { error: quizError, data: quizData } = await supabaseClient
         .from("Quiz")
@@ -227,7 +227,7 @@ export default function SubmitNewURL() {
         description: "Generating comprehensive tutorial...",
       });
 
-      const tutorial = await generateTutorial(data.content);
+      const tutorial = await generateTutorial(data.content, data.title);
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
         .update({ tutorial })
@@ -368,7 +368,7 @@ export default function SubmitNewURL() {
         description: "Using AI to create MCQs...",
       });
       console.log("[onSubmit] Generating MCQs..."); // Log MCQ generation start
-      const mcqs = await generateMCQs(content);
+      const mcqs = await generateMCQs(content, title);
       console.log(`[onSubmit] Generated ${mcqs.length} MCQs.`); // Log MCQ generation end
 
       // Step 5: Create a quiz entry in the database

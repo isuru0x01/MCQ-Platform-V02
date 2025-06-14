@@ -49,7 +49,13 @@ function getTokenLimit(model: string): number {
 }
 
 // Main function to generate MCQs
-export async function generateMCQs(content: string): Promise<any[]> {
+export async function generateMCQs(content: string, title?: string): Promise<any[]> {
+  // If content is empty but we have a title (fallback for YouTube videos with failed transcript extraction)
+  if ((!content || content.trim() === "") && title) {
+    console.log("Using video title as fallback for MCQ generation:", title);
+    content = `Video Title: ${title}. Please create multiple choice questions based on this title.`;
+  }
+  
   const prompt = `Only return the JSON response. Generate exactly 20 multiple choice questions in JSON format based on this content: ${content}
 
       Return ONLY a JSON array with this exact structure:

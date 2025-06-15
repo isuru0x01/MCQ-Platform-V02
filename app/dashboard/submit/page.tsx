@@ -362,22 +362,22 @@ export default function SubmitNewURL() {
           variant: "default",
         });
       }
-      console.log("[onSubmit] Content extracted successfully. Title:", title, "Image URL:", imageUrl); // Log extraction success
-      // console.log("[onSubmit] Extracted content snippet:", content?.substring(0, 200)); // Optional: Log content snippet
+      console.log("[onSubmit] Content extracted successfully. Title:", safeTitle, "Image URL:", imageUrl); // Use safeTitle
+      // console.log("[onSubmit] Extracted content snippet:", safeContent?.substring(0, 200)); // Use safeContent
 
       // Step 2: Determine the type of content
       const type = url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "article";
-      console.log("[onSubmit] Determined resource type:", type); // Log resource type
+      console.log("[onSubmit] Determined resource type:", type);
 
       // Step 3: Save the resource to the database
-      console.log("[onSubmit] Inserting resource into database..."); // Log DB insert start
+      console.log("[onSubmit] Inserting resource into database...");
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([{
           url,
           type,
-          title,
-          content,
+          title: safeTitle, // Use safeTitle
+          content: safeContent, // Use safeContent
           image_url: imageUrl,
           userId: user.id.toString(),
         }])
@@ -385,53 +385,52 @@ export default function SubmitNewURL() {
         .single();
 
       if (resourceError) {
-        console.error("[onSubmit] Supabase resource insert error:", resourceError); // Log DB error
+        console.error("[onSubmit] Supabase resource insert error:", resourceError);
         throw resourceError;
       }
-      console.log("[onSubmit] Resource inserted successfully. ID:", resource.id); // Log DB insert success
+      console.log("[onSubmit] Resource inserted successfully. ID:", resource.id);
 
       // Step 4: Generate MCQs
       toast({
         title: "Generating Questions",
         description: "Using AI to create MCQs...",
       });
-      console.log("[onSubmit] Generating MCQs..."); // Log MCQ generation start
-     
-      // To this
-      const mcqs = await generateMCQs(content, title);
-      
-      // To this
-      const tutorial = await generateTutorial(content, title);
+      console.log("[onSubmit] Generating MCQs...");
+
+      // Use safe variables for AI generation
+      const mcqs = await generateMCQs(safeContent, safeTitle); // Use safe variables
+
+      const tutorial = await generateTutorial(safeContent, safeTitle); // Use safe variables
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
         .update({ tutorial })
         .eq('id', resource.id);
 
       if (tutorialError) {
-        console.error("[onSubmit] Supabase tutorial update error:", tutorialError); // Log tutorial update error
+        console.error("[onSubmit] Supabase tutorial update error:", tutorialError);
         throw tutorialError;
       }
-      console.log("[onSubmit] Tutorial updated successfully."); // Log tutorial update success
+      console.log("[onSubmit] Tutorial updated successfully.");
 
       // Reset forms and close dialogs
-      console.log("[onSubmit] Resetting forms and closing dialogs..."); // Log cleanup start
+      console.log("[onSubmit] Resetting forms and closing dialogs...");
       websiteForm.reset();
       youtubeForm.reset();
       setIsWebsiteDialogOpen(false);
       setIsYoutubeDialogOpen(false);
-      console.log("[onSubmit] Forms reset and dialogs closed."); // Log cleanup end
+      console.log("[onSubmit] Forms reset and dialogs closed.");
 
       // Decrement points if applicable
       if (limitCheck.isPro) {
-        console.log("[onSubmit] Decrementing pro points for:", user.emailAddresses[0].emailAddress); // Log points decrement
+        console.log("[onSubmit] Decrementing pro points for:", user.emailAddresses[0].emailAddress);
         await decrementProPoints(user.emailAddresses[0].emailAddress);
       }
 
-      console.log("[onSubmit] Navigating to quiz page:", `/dashboard/quiz/${resource.id}`); // Log navigation
+      console.log("[onSubmit] Navigating to quiz page:", `/dashboard/quiz/${resource.id}`);
       router.push(`/dashboard/quiz/${resource.id}`);
 
     } catch (error) {
-      console.error("[onSubmit] Error caught in onSubmit:", error); // Log caught error
+      console.error("[onSubmit] Error caught in onSubmit:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process request",
@@ -439,7 +438,7 @@ export default function SubmitNewURL() {
       });
     } finally {
       setLoading(false);
-      console.log("[onSubmit] Loading state set to false in finally block."); // Log final loading state
+      console.log("[onSubmit] Loading state set to false in finally block.");
     }
   }
 

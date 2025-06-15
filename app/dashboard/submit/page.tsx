@@ -369,60 +369,15 @@ export default function SubmitNewURL() {
         description: "Using AI to create MCQs...",
       });
       console.log("[onSubmit] Generating MCQs..."); // Log MCQ generation start
+     
+      // To this
       const mcqs = await generateMCQs(content, title);
-      console.log(`[onSubmit] Generated ${mcqs.length} MCQs.`); // Log MCQ generation end
-
-      // Step 5: Create a quiz entry in the database
-      console.log("[onSubmit] Inserting quiz into database..."); // Log quiz insert start
-      const { error: quizError, data: quizData } = await supabaseClient
-        .from("Quiz")
-        .insert([{
-          resourceId: resource.id,
-          userId: user.id.toString(),
-        }])
-        .select("id")
-        .single();
-
-      if (quizError) {
-        console.error("[onSubmit] Supabase quiz insert error:", quizError); // Log quiz insert error
-        throw quizError;
-      }
-      const quizId = quizData.id;
-      console.log("[onSubmit] Quiz inserted successfully. ID:", quizId); // Log quiz insert success
-
-      // Step 6: Transform MCQs and insert them
-      const mcqData = mcqs.map((mcq) => ({
-        quizId: quizId,
-        question: mcq.question,
-        optionA: mcq.options[0],
-        optionB: mcq.options[1],
-        optionC: mcq.options[2],
-        optionD: mcq.options[3],
-        correctOption: mcq.options.indexOf(mcq.correct_answer) + 1,
-      }));
-      console.log("[onSubmit] Inserting MCQs into database..."); // Log MCQ insert start
-      const { error: mcqError } = await supabaseClient
-        .from("MCQ")
-        .insert(mcqData);
-
-      if (mcqError) {
-        console.error("[onSubmit] Supabase MCQ insert error:", mcqError); // Log MCQ insert error
-        throw mcqError;
-      }
-      console.log("[onSubmit] MCQs inserted successfully."); // Log MCQ insert success
-
-      // Step 7: Generate and store tutorial
-      toast({
-        title: "Generating Tutorial",
-        description: "Creating a comprehensive tutorial...",
-      });
-      console.log("[onSubmit] Generating tutorial..."); // Log tutorial generation start
+      
+      // To this
       const tutorial = await generateTutorial(content, title);
-      console.log("[onSubmit] Tutorial generated. Updating resource..."); // Log tutorial update start
-
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
-        .update({ tutorial: tutorial })
+        .update({ tutorial })
         .eq('id', resource.id);
 
       if (tutorialError) {

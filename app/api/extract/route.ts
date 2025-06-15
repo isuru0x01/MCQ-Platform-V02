@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     };
 
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      // Existing YouTube extraction logic
+      // Extract YouTube video ID
       const videoId = url.match(
         /(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/
       )?.[1];
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
         );
       }
 
+      // Get video title and thumbnail
       const videoResponse = await axios.get(
         `https://www.youtube.com/watch?v=${videoId}`,
         { headers }
@@ -57,16 +58,17 @@ export async function POST(req: Request) {
         imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
 
-      // Try primary method first
+      // Method 1: Try primary method first (YoutubeTranscript)
       try {
         const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
           lang: "en",
         });
         content = transcript.map((t) => t.text).join(" ");
+        console.log("Successfully fetched transcript with primary method");
       } catch (primaryError) {
         console.error("Error fetching transcript with primary method:", primaryError);
         
-        // Try alternative method using youtube-transcript-api
+        // Method 2: Try alternative method using youtube-transcript-api
         try {
           // Validate video ID first
           const isValidId = await TranscriptAPI.validateID(videoId);
@@ -80,16 +82,71 @@ export async function POST(req: Request) {
           }
         } catch (alternativeError) {
           console.error("Error fetching transcript with alternative method:", alternativeError);
-          return NextResponse.json(
-            { 
-              content: "", // Empty content indicates transcript extraction failed
-              imageUrl,
-              title, // Still return the title for fallback mechanism
-              error: "Unable to extract YouTube transcript. Using video title as fallback.",
-              details: "Both transcript extraction methods failed."
-            },
-            { status: 200 } // Return 200 instead of 500 to allow processing to continue
-          );
+          
+          // Method 3: Try RapidAPI
+          try {
+            const rapidApiKey = process.env.RAPIDAPI_KEY;
+            if (!rapidApiKey) {
+              throw new Error("RapidAPI key not configured");
+            }
+            
+            const rapidApiResponse = await axios.get(
+              `https://youtube-transcript3.p.rapidapi.com/api/transcript?videoId=${videoId}`,
+              {
+                headers: {
+                  'x-rapidapi-key': rapidApiKey,
+                  'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+                }
+              }
+            );
+            
+            if (rapidApiResponse.data && rapidApiResponse.data.transcript) {
+              content = rapidApiResponse.data.transcript;
+              console.log("Successfully fetched transcript with RapidAPI");
+            } else {
+              throw new Error("No transcript data in RapidAPI response");
+            }
+          } catch (rapidApiError) {
+            console.error("Error fetching transcript with RapidAPI:", rapidApiError);
+            
+            // Method 4: Try Supadata API
+            try {
+              const supadataApiKey = process.env.SUPADATA_API_KEY;
+              if (!supadataApiKey) {
+                throw new Error("Supadata API key not configured");
+              }
+              
+              const supadataResponse = await axios.get(
+                `https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}`,
+                {
+                  headers: {
+                    'x-api-key': supadataApiKey
+                  }
+                }
+              );
+              
+              if (supadataResponse.data && supadataResponse.data.transcript) {
+                content = supadataResponse.data.transcript;
+                console.log("Successfully fetched transcript with Supadata API");
+              } else {
+                throw new Error("No transcript data in Supadata API response");
+              }
+            } catch (supadataError) {
+              console.error("Error fetching transcript with Supadata API:", supadataError);
+              
+              // All methods failed, return empty content but include title for fallback
+              return NextResponse.json(
+                { 
+                  content: "", // Empty content indicates transcript extraction failed
+                  imageUrl,
+                  title, // Still return the title for fallback mechanism
+                  error: "Unable to extract YouTube transcript. Using video title as fallback.",
+                  details: "All transcript extraction methods failed."
+                },
+                { status: 200 } // Return 200 instead of 500 to allow processing to continue
+              );
+            }
+          }
         }
       }
     } else {

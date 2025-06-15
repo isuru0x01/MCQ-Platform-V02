@@ -27,6 +27,7 @@ import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { checkUserLimits, decrementProPoints } from "@/app/actions/checkUserLimits";
 
+
 export const maxDuration = 60;
 
 // Define separate schemas

@@ -334,7 +334,30 @@ export default function SubmitNewURL() {
         throw new Error(errorJson.error || 'Failed to extract content');
       }
 
-      const { content, imageUrl, title } = await extractResponse.json();
+      // After extracting content and title (around line 337)
+      const { content, imageUrl, title, error: extractError } = await extractResponse.json();
+      
+      // Log any extraction errors but continue processing
+      if (extractError) {
+        console.log("[onSubmit] Extract API warning:", extractError);
+        // Show a toast but don't throw an error
+        toast({
+          title: "Warning",
+          description: "Using video title as fallback due to transcript extraction issues",
+          variant: "default",
+        });
+      }
+      
+      // Add a check for empty content but valid title
+      if ((!content || content.trim() === "") && title) {
+        console.log("[onSubmit] Empty content but title available, using title as fallback:", title);
+        // Show a toast to inform the user
+        toast({
+          title: "Limited Content",
+          description: "Using video title to generate content as transcript extraction was limited",
+          variant: "default",
+        });
+      }
       console.log("[onSubmit] Content extracted successfully. Title:", title, "Image URL:", imageUrl); // Log extraction success
       // console.log("[onSubmit] Extracted content snippet:", content?.substring(0, 200)); // Optional: Log content snippet
 

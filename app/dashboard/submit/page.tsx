@@ -337,6 +337,10 @@ export default function SubmitNewURL() {
       // After extracting content and title (around line 337)
       const { content, imageUrl, title, error: extractError } = await extractResponse.json();
       
+      // Add safety checks to ensure content and title are strings
+      const safeContent = typeof content === 'string' ? content : '';
+      const safeTitle = typeof title === 'string' ? title : '';
+      
       // Log any extraction errors but continue processing
       if (extractError) {
         console.log("[onSubmit] Extract API warning:", extractError);
@@ -349,8 +353,8 @@ export default function SubmitNewURL() {
       }
       
       // Add a check for empty content but valid title
-      if ((!content || content.trim() === "") && title) {
-        console.log("[onSubmit] Empty content but title available, using title as fallback:", title);
+      if ((!safeContent || safeContent.trim() === "") && safeTitle) {
+        console.log("[onSubmit] Empty content but title available, using title as fallback:", safeTitle);
         // Show a toast to inform the user
         toast({
           title: "Limited Content",

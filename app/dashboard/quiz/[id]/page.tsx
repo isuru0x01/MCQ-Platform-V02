@@ -444,7 +444,14 @@ export default function QuizPage() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground truncate">{resource.title}</h1>
+                  <div className="max-w-xs sm:max-w-md lg:max-w-lg overflow-hidden">
+                    <h1
+                      className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground truncate whitespace-nowrap"
+                      title={resource.title}
+                    >
+                      {resource.title}
+                    </h1>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"

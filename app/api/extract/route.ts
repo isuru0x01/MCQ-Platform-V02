@@ -64,31 +64,42 @@ export async function POST(req: Request) {
         });
         content = transcript.map((t) => t.text).join(" ");
       } catch (primaryError) {
-        console.error("Error fetching transcript with primary method:", primaryError);
-        
-        // Try alternative method using youtube-transcript-api
-        try {
-          // Validate video ID first
-          const isValidId = await TranscriptAPI.validateID(videoId);
-          
-          if (isValidId) {
-            const alternativeTranscript = await TranscriptAPI.getTranscript(videoId);
-            content = alternativeTranscript.map((t) => t.text).join(" ");
-            console.log("Successfully fetched transcript with alternative method");
-          } else {
-            throw new Error("Invalid video ID or transcript not available");
+        console.error("Primary transcript method failed:", primaryError);
+        console.log("Attempting fallback transcript extraction methods...");
+
+        const fallbackMethods = [
+          { name: 'youtube-transcript-api', fn: fetchWithYoutubeTranscriptApi },
+          { name: 'RapidAPI', fn: fetchWithRapidApi },
+          { name: 'SupaData', fn: fetchWithSupaData },
+        ];
+
+        let success = false;
+        for (const method of fallbackMethods) {
+          try {
+            console.log(`Trying fallback method: ${method.name}...`);
+            const transcript = await method.fn(videoId, url);
+            if (transcript) {
+              content = transcript;
+              console.log(`Successfully fetched transcript with ${method.name}`);
+              success = true;
+              break; // Exit the loop on success
+            }
+          } catch (error) {
+            console.error(`Error with ${method.name} fallback:`, error);
           }
-        } catch (alternativeError) {
-          console.error("Error fetching transcript with alternative method:", alternativeError);
+        }
+
+        if (!success) {
+          console.error("All fallback transcript methods failed.");
           return NextResponse.json(
             { 
               content: "", // Empty content indicates transcript extraction failed
               imageUrl,
               title, // Still return the title for fallback mechanism
               error: "Unable to extract YouTube transcript. Using video title as fallback.",
-              details: "Both transcript extraction methods failed."
+              details: "All transcript extraction methods failed."
             },
-            { status: 200 } // Return 200 instead of 500 to allow processing to continue
+            { status: 200 } // Return 200 to allow processing to continue
           );
         }
       }
@@ -155,4 +166,61 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+// Helper functions for different transcript services
+
+async function fetchWithYoutubeTranscriptApi(videoId: string): Promise<string | null> {
+  const isValidId = await TranscriptAPI.validateID(videoId);
+  if (isValidId) {
+    const transcript = await TranscriptAPI.getTranscript(videoId);
+    return transcript.map((t: any) => t.text).join(" ");
+  }
+  return null;
+}
+
+async function fetchWithRapidApi(videoId: string): Promise<string | null> {
+  const rapidApiKey = process.env.RAPIDAPI_KEY;
+  console.log("Attempting to read RAPIDAPI_KEY. Found:", rapidApiKey ? 'Yes' : 'No');
+  
+  if (!rapidApiKey) {
+    console.error("RapidAPI key (RAPIDAPI_KEY) not set. Skipping this fallback.");
+    return null; // Skip if key is not configured
+  }
+
+  const response = await axios.get('https://youtube-transcript3.p.rapidapi.com/api/transcript', {
+    params: { videoId },
+    headers: {
+      'x-rapidapi-key': rapidApiKey,
+      'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+    }
+  });
+
+  if (response.data && Array.isArray(response.data)) {
+    return response.data.map((t: any) => t.text).join(" ");
+  }
+  throw new Error('Unexpected response format from RapidAPI');
+}
+
+async function fetchWithSupaData(videoId: string, url: string): Promise<string | null> {
+  const supaDataApiKey = process.env.SUPADATA_API_KEY;
+  console.log("Attempting to read SUPADATA_API_KEY. Found:", supaDataApiKey ? 'Yes' : 'No');
+
+  if (!supaDataApiKey) {
+    console.error("SupaData API key (SUPADATA_API_KEY) not set. Skipping this fallback.");
+    return null; // Skip if key is not configured
+  }
+
+  const response = await axios.get('https://api.supadata.ai/v1/youtube/transcript', {
+    params: { url, text: true },
+    headers: { 'x-api-key': supaDataApiKey }
+  });
+
+  if (typeof response.data === 'string' && response.data.length > 0) {
+    return response.data;
+  }
+  if (response.data && typeof response.data.transcript === 'string' && response.data.transcript.length > 0) {
+    return response.data.transcript;
+  }
+  throw new Error('Unexpected or empty response format from SupaData');
 }

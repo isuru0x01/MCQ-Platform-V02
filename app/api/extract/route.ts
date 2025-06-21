@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
     let content = "";
     let imageUrl: string | null = null;
-    let title: string;
+    let title = ""; // Initialize with empty string instead of undefined
 
     // Common headers to mimic a browser request
     const headers = {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     };
 
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      // Existing YouTube extraction logic
+      // Extract YouTube video ID
       const videoId = url.match(
         /(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([\w-]{11})/
       )?.[1];
@@ -40,13 +40,17 @@ export async function POST(req: Request) {
         );
       }
 
+      // Get video title and thumbnail - add safety checks
       const videoResponse = await axios.get(
         `https://www.youtube.com/watch?v=${videoId}`,
         { headers }
       );
       const $ = cheerioLoad(videoResponse.data);
-      title = $("title").text().replace("- YouTube", "").trim() || "YouTube Video";
-
+      
+      // Add safety checks for title extraction
+      const titleText = $("title").text();
+      title = titleText ? titleText.replace("- YouTube", "").trim() : "YouTube Video";
+      
       imageUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       try {
         const imageRes = await axios.get(imageUrl, { headers });
@@ -57,12 +61,13 @@ export async function POST(req: Request) {
         imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
 
-      // Try primary method first
+      // Method 1: Try primary method first (YoutubeTranscript)
       try {
         const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
           lang: "en",
         });
         content = transcript.map((t) => t.text).join(" ");
+        console.log("Successfully fetched transcript with primary method");
       } catch (primaryError) {
         console.error("Primary transcript method failed:", primaryError);
         console.log("Attempting fallback transcript extraction methods...");
@@ -114,10 +119,10 @@ export async function POST(req: Request) {
         
         const $ = cheerioLoad(response.data);
 
-        title =
-          $('meta[property="og:title"]').attr("content") ||
-          $("title").text() ||
-          "Article";
+        // Add safety checks for article title extraction
+        const ogTitle = $('meta[property="og:title"]').attr("content");
+        const pageTitle = $("title").text();
+        title = ogTitle || pageTitle || "Article";
 
         const possibleImages = [
           $('meta[property="og:image"]').attr("content"),

@@ -27,6 +27,7 @@ import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { checkUserLimits, decrementProPoints } from "@/app/actions/checkUserLimits";
 
+
 export const maxDuration = 60;
 
 // Define separate schemas
@@ -333,23 +334,50 @@ export default function SubmitNewURL() {
         throw new Error(errorJson.error || 'Failed to extract content');
       }
 
-      const { content, imageUrl, title } = await extractResponse.json();
-      console.log("[onSubmit] Content extracted successfully. Title:", title, "Image URL:", imageUrl); // Log extraction success
-      // console.log("[onSubmit] Extracted content snippet:", content?.substring(0, 200)); // Optional: Log content snippet
+      // After extracting content and title (around line 337)
+      const { content, imageUrl, title, error: extractError } = await extractResponse.json();
+      
+      // Add safety checks to ensure content and title are strings
+      const safeContent = typeof content === 'string' ? content : '';
+      const safeTitle = typeof title === 'string' ? title : '';
+      
+      // Log any extraction errors but continue processing
+      if (extractError) {
+        console.log("[onSubmit] Extract API warning:", extractError);
+        // Show a toast but don't throw an error
+        toast({
+          title: "Warning",
+          description: "Using video title as fallback due to transcript extraction issues",
+          variant: "default",
+        });
+      }
+      
+      // Add a check for empty content but valid title
+      if ((!safeContent || safeContent.trim() === "") && safeTitle) {
+        console.log("[onSubmit] Empty content but title available, using title as fallback:", safeTitle);
+        // Show a toast to inform the user
+        toast({
+          title: "Limited Content",
+          description: "Using video title to generate content as transcript extraction was limited",
+          variant: "default",
+        });
+      }
+      console.log("[onSubmit] Content extracted successfully. Title:", safeTitle, "Image URL:", imageUrl); // Use safeTitle
+      // console.log("[onSubmit] Extracted content snippet:", safeContent?.substring(0, 200)); // Use safeContent
 
       // Step 2: Determine the type of content
       const type = url.includes("youtube.com") || url.includes("youtu.be") ? "youtube" : "article";
-      console.log("[onSubmit] Determined resource type:", type); // Log resource type
+      console.log("[onSubmit] Determined resource type:", type);
 
       // Step 3: Save the resource to the database
-      console.log("[onSubmit] Inserting resource into database..."); // Log DB insert start
+      console.log("[onSubmit] Inserting resource into database...");
       const { data: resource, error: resourceError } = await supabaseClient
         .from("Resource")
         .insert([{
           url,
           type,
-          title,
-          content,
+          title: safeTitle, // Use safeTitle
+          content: safeContent, // Use safeContent
           image_url: imageUrl,
           userId: user.id.toString(),
         }])
@@ -357,98 +385,52 @@ export default function SubmitNewURL() {
         .single();
 
       if (resourceError) {
-        console.error("[onSubmit] Supabase resource insert error:", resourceError); // Log DB error
+        console.error("[onSubmit] Supabase resource insert error:", resourceError);
         throw resourceError;
       }
-      console.log("[onSubmit] Resource inserted successfully. ID:", resource.id); // Log DB insert success
+      console.log("[onSubmit] Resource inserted successfully. ID:", resource.id);
 
       // Step 4: Generate MCQs
       toast({
         title: "Generating Questions",
         description: "Using AI to create MCQs...",
       });
-      console.log("[onSubmit] Generating MCQs..."); // Log MCQ generation start
-      const mcqs = await generateMCQs(content, title);
-      console.log(`[onSubmit] Generated ${mcqs.length} MCQs.`); // Log MCQ generation end
+      console.log("[onSubmit] Generating MCQs...");
 
-      // Step 5: Create a quiz entry in the database
-      console.log("[onSubmit] Inserting quiz into database..."); // Log quiz insert start
-      const { error: quizError, data: quizData } = await supabaseClient
-        .from("Quiz")
-        .insert([{
-          resourceId: resource.id,
-          userId: user.id.toString(),
-        }])
-        .select("id")
-        .single();
+      // Use safe variables for AI generation
+      const mcqs = await generateMCQs(safeContent, safeTitle); // Use safe variables
 
-      if (quizError) {
-        console.error("[onSubmit] Supabase quiz insert error:", quizError); // Log quiz insert error
-        throw quizError;
-      }
-      const quizId = quizData.id;
-      console.log("[onSubmit] Quiz inserted successfully. ID:", quizId); // Log quiz insert success
-
-      // Step 6: Transform MCQs and insert them
-      const mcqData = mcqs.map((mcq) => ({
-        quizId: quizId,
-        question: mcq.question,
-        optionA: mcq.options[0],
-        optionB: mcq.options[1],
-        optionC: mcq.options[2],
-        optionD: mcq.options[3],
-        correctOption: mcq.options.indexOf(mcq.correct_answer) + 1,
-      }));
-      console.log("[onSubmit] Inserting MCQs into database..."); // Log MCQ insert start
-      const { error: mcqError } = await supabaseClient
-        .from("MCQ")
-        .insert(mcqData);
-
-      if (mcqError) {
-        console.error("[onSubmit] Supabase MCQ insert error:", mcqError); // Log MCQ insert error
-        throw mcqError;
-      }
-      console.log("[onSubmit] MCQs inserted successfully."); // Log MCQ insert success
-
-      // Step 7: Generate and store tutorial
-      toast({
-        title: "Generating Tutorial",
-        description: "Creating a comprehensive tutorial...",
-      });
-      console.log("[onSubmit] Generating tutorial..."); // Log tutorial generation start
-      const tutorial = await generateTutorial(content, title);
-      console.log("[onSubmit] Tutorial generated. Updating resource..."); // Log tutorial update start
-
+      const tutorial = await generateTutorial(safeContent, safeTitle); // Use safe variables
       const { error: tutorialError } = await supabaseClient
         .from("Resource")
-        .update({ tutorial: tutorial })
+        .update({ tutorial })
         .eq('id', resource.id);
 
       if (tutorialError) {
-        console.error("[onSubmit] Supabase tutorial update error:", tutorialError); // Log tutorial update error
+        console.error("[onSubmit] Supabase tutorial update error:", tutorialError);
         throw tutorialError;
       }
-      console.log("[onSubmit] Tutorial updated successfully."); // Log tutorial update success
+      console.log("[onSubmit] Tutorial updated successfully.");
 
       // Reset forms and close dialogs
-      console.log("[onSubmit] Resetting forms and closing dialogs..."); // Log cleanup start
+      console.log("[onSubmit] Resetting forms and closing dialogs...");
       websiteForm.reset();
       youtubeForm.reset();
       setIsWebsiteDialogOpen(false);
       setIsYoutubeDialogOpen(false);
-      console.log("[onSubmit] Forms reset and dialogs closed."); // Log cleanup end
+      console.log("[onSubmit] Forms reset and dialogs closed.");
 
       // Decrement points if applicable
       if (limitCheck.isPro) {
-        console.log("[onSubmit] Decrementing pro points for:", user.emailAddresses[0].emailAddress); // Log points decrement
+        console.log("[onSubmit] Decrementing pro points for:", user.emailAddresses[0].emailAddress);
         await decrementProPoints(user.emailAddresses[0].emailAddress);
       }
 
-      console.log("[onSubmit] Navigating to quiz page:", `/dashboard/quiz/${resource.id}`); // Log navigation
+      console.log("[onSubmit] Navigating to quiz page:", `/dashboard/quiz/${resource.id}`);
       router.push(`/dashboard/quiz/${resource.id}`);
 
     } catch (error) {
-      console.error("[onSubmit] Error caught in onSubmit:", error); // Log caught error
+      console.error("[onSubmit] Error caught in onSubmit:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to process request",
@@ -456,7 +438,7 @@ export default function SubmitNewURL() {
       });
     } finally {
       setLoading(false);
-      console.log("[onSubmit] Loading state set to false in finally block."); // Log final loading state
+      console.log("[onSubmit] Loading state set to false in finally block.");
     }
   }
 
